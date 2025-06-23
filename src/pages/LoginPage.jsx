@@ -1,29 +1,91 @@
 import { NavLink } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
+import { auth } from "../firebase/config";
+import { signInWithEmailAndPassword } from "firebase/auth";
+import { useState } from "react";
 
 export default function LoginPage() {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const navigate = useNavigate();
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    try {
+      const userCredential = await signInWithEmailAndPassword(
+        auth,
+        email,
+        password);
+      const user = userCredential.user;
+      console.log("Logged in successfully", user);
+      navigate("/");
+    } catch (error) {
+      console.error("Error logging in:", error);
+      alert("Login failed. Please check your credentials.");
+    }
+  };
+
   return (
-    <div className="h-full">
-      <div className="flex justify-center items-center my-10">
+    <main className="h-full">
+      <section className="flex justify-center items-center my-10">
         <div className="md:w-[400px] border px-8 py-16 rounded-lg border-gray-400">
-          <span className="block text-center font-semibold text-xl mb-5">Log in to your account</span>
-          <form className="space-y-4">
-            <label htmlFor="email">Email</label><br/>
-            <input type="text" name="email" className="border border-gray-500 w-full p-1 rounded-sm"></input> <br/>
-            <label htmlFor="password">Password</label><br/>
-            <input type="password" name="password" className="border border-gray-500 w-full p-1 rounded-sm"></input><br/>
+          <h1 className="block text-center font-semibold text-xl mb-5">
+            Log in to your account
+          </h1>
+
+          <form className="space-y-4" onSubmit={handleSubmit}>
+            <div>
+              <label htmlFor="email">Email</label>
+              <br />
+              <input
+                type="text"
+                name="email"
+                id="email"
+                className="border border-gray-500 w-full p-1 rounded-sm"
+                value = {email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              ></input>
+            </div>
+
+            <div>
+              <label htmlFor="password">Password</label>
+              <br />
+              <input
+                type="password"
+                name="password"
+                id="password"
+                className="border border-gray-500 w-full p-1 rounded-sm"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              ></input>
+            </div>
+
             <div className="flex  justify-between">
               <div>
                 <input type="checkbox"></input>
                 <label>Remember me</label>
               </div>
+
               <NavLink to="/">Forgot password?</NavLink>
             </div>
-            <button className="border border-gray-500 w-full p-2 rounded-[10px] ">Login</button>
-            <button className="border border-gray-500 w-full p-2 rounded-[10px] ">Login with Google</button>
-            <NavLink to="/signup" className="text-sm block text-center">Don't have an account yet? Sign up here</NavLink>
+
+            <button className="border border-gray-500 w-full p-2 rounded-[10px] ">
+              Login
+            </button>
+
+            <button className="border border-gray-500 w-full p-2 rounded-[10px] ">
+              Login with Google
+            </button>
+
+            <NavLink to="/signup" className="text-sm block text-center">
+              Don't have an account yet? Sign up here
+            </NavLink>
           </form>
         </div>
-      </div>
-    </div>
+      </section>
+    </main>
   );
 }
