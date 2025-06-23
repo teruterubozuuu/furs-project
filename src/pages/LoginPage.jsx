@@ -1,13 +1,14 @@
 import { NavLink } from "react-router-dom";
 import { useNavigate } from "react-router-dom";
 import { auth } from "../firebase/config";
-import { signInWithEmailAndPassword } from "firebase/auth";
+import { signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider } from "firebase/auth";
 import { useState } from "react";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const navigate = useNavigate();
+  const provider = new GoogleAuthProvider();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -16,7 +17,8 @@ export default function LoginPage() {
       const userCredential = await signInWithEmailAndPassword(
         auth,
         email,
-        password);
+        password
+      );
       const user = userCredential.user;
       console.log("Logged in successfully", user);
       navigate("/");
@@ -25,6 +27,19 @@ export default function LoginPage() {
       alert("Login failed. Please check your credentials.");
     }
   };
+
+  const handleLoginWithGoogle = async () => {
+    signInWithPopup(auth, provider)
+    try{
+      const result = await signInWithPopup(auth, provider);
+      const user = result.user;
+      console.log("Logged in with Google successfully", user);
+      navigate("/");
+    }catch (error) {
+      console.error("Error logging in with Google:", error);
+      alert("Google login failed. Please try again.");
+    }
+  }
 
   return (
     <main className="h-full">
@@ -43,7 +58,7 @@ export default function LoginPage() {
                 name="email"
                 id="email"
                 className="border border-gray-500 w-full p-1 rounded-sm"
-                value = {email}
+                value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
               ></input>
@@ -76,7 +91,7 @@ export default function LoginPage() {
               Login
             </button>
 
-            <button className="border border-gray-500 w-full p-2 rounded-[10px] ">
+            <button className="border border-gray-500 w-full p-2 rounded-[10px] " onClick={handleLoginWithGoogle}>
               Login with Google
             </button>
 
