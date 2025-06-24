@@ -86,11 +86,11 @@ export default function RegisterPage() {
               ></input>
             </div>
 
-            <button className="border border-gray-500 w-full p-2 rounded-sm pointer">
+            <button className="border border-gray-500 w-full p-2 rounded-sm cursor-pointer">
               Sign up
             </button>
 
-            <NavLink to="/login" className="text-sm block text-center">
+            <NavLink to="/login" className="text-sm block text-center cursor-pointer">
               Already have an account? Login here
             </NavLink>
           </form>

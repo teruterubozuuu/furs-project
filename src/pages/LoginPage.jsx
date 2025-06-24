@@ -84,18 +84,18 @@ export default function LoginPage() {
                 <label>Remember me</label>
               </div>
 
-              <NavLink to="/">Forgot password?</NavLink>
+              <NavLink to="/" className="cursor-pointer">Forgot password?</NavLink>
             </div>
 
-            <button className="border border-gray-500 w-full p-2 rounded-[10px] ">
+            <button className="border border-gray-500 w-full p-2 rounded-[10px] cursor-pointer" type="submit">
               Login
             </button>
 
-            <button className="border border-gray-500 w-full p-2 rounded-[10px] " onClick={handleLoginWithGoogle}>
+            <button className="border border-gray-500 w-full p-2 rounded-[10px] cursor-pointer " onClick={handleLoginWithGoogle}>
               Login with Google
             </button>
 
-            <NavLink to="/signup" className="text-sm block text-center">
+            <NavLink to="/signup" className="text-sm block text-center cursor-pointer">
               Don't have an account yet? Sign up here
             </NavLink>
           </form>
