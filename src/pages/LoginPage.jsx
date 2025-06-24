@@ -1,19 +1,30 @@
 import { NavLink } from "react-router-dom";
 import { useNavigate } from "react-router-dom";
 import { auth } from "../firebase/config";
-import { signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider } from "firebase/auth";
+import {
+  setPersistence,
+  browserLocalPersistence,
+  browserSessionPersistence,
+  signInWithEmailAndPassword,
+  signInWithPopup,
+  GoogleAuthProvider,
+} from "firebase/auth";
 import { useState } from "react";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [isChecked, setIsChecked] = useState(false);
   const navigate = useNavigate();
   const provider = new GoogleAuthProvider();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
     try {
+      await setPersistence(
+        auth,
+        isChecked ? browserLocalPersistence : browserSessionPersistence
+      );
       const userCredential = await signInWithEmailAndPassword(
         auth,
         email,
@@ -29,17 +40,20 @@ export default function LoginPage() {
   };
 
   const handleLoginWithGoogle = async () => {
-    signInWithPopup(auth, provider)
-    try{
+    try {
+      await setPersistence(
+        auth,
+        isChecked ? browserLocalPersistence : browserSessionPersistence
+      );
       const result = await signInWithPopup(auth, provider);
       const user = result.user;
       console.log("Logged in with Google successfully", user);
       navigate("/");
-    }catch (error) {
+    } catch (error) {
       console.error("Error logging in with Google:", error);
       alert("Google login failed. Please try again.");
     }
-  }
+  };
 
   return (
     <main className="h-full">
@@ -80,22 +94,39 @@ export default function LoginPage() {
 
             <div className="flex  justify-between">
               <div>
-                <input type="checkbox"></input>
-                <label>Remember me</label>
+                <input
+                  type="checkbox"
+                  id="checkbox"
+                  value={isChecked}
+                  onChange={(e) => setIsChecked(e.target.checked)}
+                ></input>
+                <label htmlFor="checkbox">Remember me</label>
               </div>
 
-              <NavLink to="/" className="cursor-pointer">Forgot password?</NavLink>
+              <NavLink to="/" className="cursor-pointer">
+                Forgot password?
+              </NavLink>
             </div>
 
-            <button className="border border-gray-500 w-full p-2 rounded-[10px] cursor-pointer" type="submit">
+            <button
+              className="border border-gray-500 w-full p-2 rounded-[10px] cursor-pointer"
+              type="submit"
+            >
               Login
             </button>
 
-            <button className="border border-gray-500 w-full p-2 rounded-[10px] cursor-pointer " onClick={handleLoginWithGoogle}>
+            <button
+              className="border border-gray-500 w-full p-2 rounded-[10px] cursor-pointer"
+              type="button"
+              onClick={handleLoginWithGoogle}
+            >
               Login with Google
             </button>
 
-            <NavLink to="/signup" className="text-sm block text-center cursor-pointer">
+            <NavLink
+              to="/signup"
+              className="text-sm block text-center cursor-pointer"
+            >
               Don't have an account yet? Sign up here
             </NavLink>
           </form>
