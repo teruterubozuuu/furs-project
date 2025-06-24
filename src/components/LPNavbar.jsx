@@ -7,7 +7,7 @@ export default function LPNavbar() {
   return (
       <div>
       <div className="flex justify-between p-5">
-        <h1>Logo</h1>
+        <h1>F.U.R.S.</h1>
 
         {/* Desktop Menu */}
         <nav className="hidden md:flex gap-5">
