@@ -1,5 +1,5 @@
 import React from 'react'
-import LPNavbar from '../../components/LPNavbar'
+import LPNavbar from '../landingpage/components/LPNavbar'
 
 export default function LandingPageLayout({children}) {
   return (
