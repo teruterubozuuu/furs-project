@@ -6,11 +6,11 @@ import BottomNavbar from "../app/components/BottomNavbar";
 
 export default function AppLayout({ children }) {
   return (
-    <div>
+    <div className="h-screen flex flex-col">
       <Header />
-      <div className="flex justify-between">
+      <div className="flex flex-1">
         <RightSidebar />
-        <div className="flex-1">
+        <div className="flex-1 flex flex-col">
           <main>{children}</main> {/*App Page: Home, Heatmap, Post, Adoption*/}
           <BottomNavbar/>
         </div>
