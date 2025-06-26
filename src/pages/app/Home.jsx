@@ -8,8 +8,8 @@ export default function Home() {
       {/*Insert content/components here*/}
 
       {/*Sample content*/}
-      <div className="border-1 border-gray-200 p-5 rounded-sm">
-        <div className="border-b-1 border-gray-200">
+      <div className="border border-gray-300 p-5 rounded-sm">
+        <div className="border-b border-gray-200">
           {/*Post header*/}
           <div className="flex h-full items-center pb-2">
             <img
@@ -17,9 +17,9 @@ export default function Home() {
               alt="Bantatay Image"
               className="w-15 h-15 rounded-full"
             />
-            <div className=" pl-2 space-y-1">
+            <div className=" pl-2 space-y">
               <p className="text-xl"> Bantatay</p>
-              <span className="text-xs p-1 border-1 border-gray-400 rounded-sm">
+              <span className="text-xs p border border-gray-400 rounded-sm">
                 Stray Animal
               </span>
             </div>
