@@ -4,7 +4,7 @@ import dog from "../../assets/dog.jpg";
 
 export default function Home() {
   return (
-    <div className="p-10 space-y-4">
+    <div className="p-8 space-y-4 h-screen">
       {/*Insert content/components here*/}
 
       {/*Sample content*/}
@@ -36,9 +36,14 @@ export default function Home() {
             <img src={dog} alt="Dog" className="w-100 rounded-sm" />
           </div>
 
-          {/*Dog characteristics*/}
+          
+          {/*Location details*/}
+          <div className="py-1">
+ <span className="italic text-gray-400">St. George Street, Sacred Heart Village, Caloocan City</span>
+          </div>
 
-          <div className="flex py-3 gap-3">
+          {/*Dog characteristics*/}
+          <div className="flex py-1 gap-3">
             <span className="text-xs p-1 border-1 border-gray-400 rounded-sm">
               Bicolor Mixed
             </span>
@@ -47,7 +52,10 @@ export default function Home() {
               Aspin
             </span>
           </div>
+
         </div>
+
+        
 
         <div className="flex flex-1 justify-between px-2 pt-3">
           <p>Like</p>

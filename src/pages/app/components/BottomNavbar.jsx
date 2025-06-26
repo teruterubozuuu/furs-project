@@ -4,7 +4,7 @@ import { NavLink } from "react-router-dom";
 export default function BottomNavbar() {
   return (
     <>
-      <nav className="fixed flex-1 bottom-0 left-0 right-0 bg-white shadow-sm border-t-2 xl:hidden border-gray-200 xl:top-0 flex px-3 py-4 justify-around gap-4">
+      <nav className="fixed flex-1 bottom-0 left-0 right-0 bg-white shadow-sm border-t-1 xl:hidden border-gray-200 xl:top-0 flex px-3 py-4 justify-around gap-4">
         <div>
           <NavLink
             to="/home"
