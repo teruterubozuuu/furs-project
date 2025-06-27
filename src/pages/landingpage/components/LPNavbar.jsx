@@ -5,27 +5,20 @@ export default function LPNavbar() {
     const [isOpen, setIsOpen] = useState(false);
 
   return (
-      <div>
-      <div className="flex justify-between p-5">
-        <h1>Logo</h1>
+      <header className='bg-[#2e7d32]'>
+      <div className="flex justify-between p-5 h-full items-center">
+        <h1 className='text-xl font-bold text-amber-50'>F.U.R.S.</h1>
 
         {/* Desktop Menu */}
-        <nav className="hidden md:flex gap-5">
+        <nav className="hidden md:flex gap-5 items-center text-[#f5f5f5f5]">
           <NavLink to="/">Home</NavLink>
           <NavLink to="/about">About</NavLink>
           <NavLink to="/contact">Contact Us</NavLink>
-          <NavLink to="/login" className='border border-gray-500 px-10'>Login</NavLink>
+          <NavLink to="/login" className='bg-[#fbc02d] py-[4px] px-8 rounded-sm font-semibold text-[#212121]'>Login</NavLink>
         </nav>
 
         {/* Hamburger Menu Icon */}
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          viewBox="0 0 448 512"
-          onClick={() => setIsOpen(true)}
-          className="flex md:hidden w-5 cursor-pointer"
-        >
-          <path d="M0 96C0 78.3 14.3 64 32 64h384c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32h384c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32h384c17.7 0 32 14.3 32 32z" />
-        </svg>
+        <i class="bi bi-list text-gray-700 text-center text-base flex md:hidden w-5 cursor-pointer"   onClick={() => setIsOpen(true)}></i>
       </div>
 
       {/* OffCanvas Menu*/}
@@ -38,8 +31,8 @@ export default function LPNavbar() {
         <NavLink to="/">Home</NavLink>
         <NavLink to="/about">About</NavLink>
         <NavLink to="/contact">Contact Us</NavLink>
-         <NavLink to="/login" className='border border-gray-500'>Login</NavLink>
+         <NavLink to="/login" className='bg-[#fbc02d] px-10'>Login</NavLink>
       </div>
-    </div>
+    </header>
   )
 }

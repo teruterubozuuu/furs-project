@@ -9,7 +9,7 @@ import RequireAuth from "../routes/RequireAuth";
 import RedirectIfAuthenticated from "../routes/RedirectIfAuthenticated";
 import LandingPageLayout from "../pages/layout/LandingPageLayout";
 import AppLayout from "../pages/layout/AppLayout";
-import AddPost from "../pages/app/AddPost";
+import Profile from "../pages/app/Profile";
 
 function AppRoutes() {
   return (
@@ -78,15 +78,17 @@ function AppRoutes() {
             </RequireAuth>
           }
         />
+
         <Route
-        path="/add-post"
-        element={
-          <RequireAuth>
-            <AppLayout>
-              <AddPost />
-            </AppLayout>
-          </RequireAuth>
-        }/>
+          path="/profile"
+          element={
+            <RequireAuth>
+              <AppLayout>
+                <Profile/>
+              </AppLayout>
+            </RequireAuth>
+          }
+        />
       </Routes>
     </>
   );
