@@ -21,8 +21,8 @@ export default function LeftSideBar() {
   }, [user]); //a dependency array to prevent this effect to run again ( ex. when typing, scrolling, etc.)
 
   return (
-    <div className="h-auto border-r border-gray-300 flex-none w-70 hidden xl:flex xl:justify-center p-4">
-      <div className="p-4 fixed">
+    <div className="h-full border-r border-gray-300 flex-none w-70 hidden xl:flex xl:justify-center p-4">
+      <div className="p-4">
         <div className="text-sm border border-gray-300 p-10 rounded-sm space-y-2 text-center">
           <img src={temporaryPic} alt="temporary picture" className="w-50 rounded-full"/>  {/*temporary picture*/}
           <h1 className="font-semibold">{username || 'Loading...'}</h1>
