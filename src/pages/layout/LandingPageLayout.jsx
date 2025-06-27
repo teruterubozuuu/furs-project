@@ -3,9 +3,11 @@ import LPNavbar from '../landingpage/components/LPNavbar'
 
 export default function LandingPageLayout({children}) {
   return (
-    <div>
+    <div className='h-screen bg-[#f5f5f5]'>
         <LPNavbar/>
-        <main>{children}</main>
+        <div >
+          <main>{children}</main>
+        </div>
     </div>
   )
 }

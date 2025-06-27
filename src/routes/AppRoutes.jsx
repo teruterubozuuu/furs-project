@@ -9,6 +9,7 @@ import RequireAuth from "../routes/RequireAuth";
 import RedirectIfAuthenticated from "../routes/RedirectIfAuthenticated";
 import LandingPageLayout from "../pages/layout/LandingPageLayout";
 import AppLayout from "../pages/layout/AppLayout";
+import Profile from "../pages/app/Profile";
 
 function AppRoutes() {
   return (
@@ -73,6 +74,17 @@ function AppRoutes() {
             <RequireAuth>
               <AppLayout>
                 <Home />
+              </AppLayout>
+            </RequireAuth>
+          }
+        />
+
+        <Route
+          path="/profile"
+          element={
+            <RequireAuth>
+              <AppLayout>
+                <Profile/>
               </AppLayout>
             </RequireAuth>
           }
