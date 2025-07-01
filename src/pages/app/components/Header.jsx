@@ -5,8 +5,8 @@ import { auth } from "../../../firebase/config";
 import { useNavigate } from "react-router-dom";
 import TopNavbar from "../components/TopNavbar";
 import { confirmAlert } from "react-confirm-alert";
-import 'react-confirm-alert/src/react-confirm-alert.css';
-
+import "react-confirm-alert/src/react-confirm-alert.css";
+import logo from "../../../assets/logo.png";
 
 export default function Header() {
   const navigate = useNavigate();
@@ -37,23 +37,49 @@ export default function Header() {
       ],
     });
   };
-  
+
   return (
     <>
-      <header className="xl:sticky top-0 p-4 flex justify-between bg-[#2e7d32]">
-        <h1 className="w-60 text-xl font-bold text-amber-50">F.U.R.S.</h1>
-        <TopNavbar/>
-        <div className="flex gap-5 w-60  justify-end">
-        <button
-          onClick={handleLogout}
-        >
-         <i className="bi bi-box-arrow-right text-xl text-[#fbc02d] cursor-pointer"></i>
-        </button>
-          <NavLink
-            to="/profile"
-          >
-            <i className="bi bi-person-circle text-[#fbc02d] text-xl cursor-pointer"></i>
-          </NavLink>
+      <header className="bg-[#2e7d32] shadow-md xl:sticky top-0 p-2">
+        <div className="flex justify-between xl:justify-center items-center gap-10 text-[#f5f5f5]">
+          <img
+            src={logo}
+            alt="Furs Logo"
+            className="w-16 h-auto object-contain"
+          />
+
+          <TopNavbar />
+
+          <nav className="flex gap-5 h-auto justify-around items-center text-center text-[#f5f5f5]">
+            {/* Logout */}
+            <div className="flex flex-col items-center">
+              <button
+                type="button"
+                onClick={handleLogout}
+                aria-label="Logout"
+                className="text-xl text-[#fbc02d] px-3 py-2 hover:bg-[rgb(40,112,56)] rounded-[10px] duration-200 ease-in"
+              >
+                <i className="bi bi-box-arrow-right"></i>
+              </button>
+              <span className="hidden xl:block text-xs mt-1">Logout</span>
+            </div>
+
+            {/* Profile */}
+            <div className="flex flex-col items-center">
+              <NavLink
+                to="/profile"
+                aria-label="Profile"
+                className={({ isActive }) =>
+                  isActive
+                    ? "text-xl text-[#fbc02d] px-3 py-2 bg-[rgb(40,112,56)] rounded-[10px] duration-200 ease-in"
+                    : "text-xl text-[#fbc02d] px-3 py-2 hover:bg-[rgb(40,112,56)] rounded-[10px] duration-200 ease-in"
+                }
+              >
+                <i className="bi bi-person-circle"></i>
+              </NavLink>
+              <span className="hidden xl:block text-xs mt-1">Profile</span>
+            </div>
+          </nav>
         </div>
       </header>
     </>

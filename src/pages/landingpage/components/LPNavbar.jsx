@@ -1,20 +1,21 @@
 import { useState } from 'react'
 import { NavLink } from 'react-router-dom'
+import logo from '../../../assets/logo.png'
 
 export default function LPNavbar() {
     const [isOpen, setIsOpen] = useState(false);
 
   return (
       <header className='bg-[#2e7d32]'>
-      <div className="flex justify-between p-5 h-full items-center">
-        <h1 className='text-xl font-bold text-amber-50'>F.U.R.S.</h1>
+      <div className="flex justify-between h-full px-5 py-2 items-center">
+        <img src={logo} alt="F.U.R.S. Logo" className='w-15' />
 
         {/* Desktop Menu */}
         <nav className="hidden md:flex gap-5 items-center text-[#f5f5f5f5]">
           <NavLink to="/">Home</NavLink>
           <NavLink to="/about">About</NavLink>
           <NavLink to="/contact">Contact Us</NavLink>
-          <NavLink to="/login" className='bg-[#fbc02d] py-[4px] px-8 rounded-sm font-semibold text-[#212121]'>Login</NavLink>
+          <NavLink to="/login" className='bg-[#fbc02d] text-[#212121] py-[4px] px-8 rounded-sm font-semibold'>Login</NavLink>
         </nav>
 
         {/* Hamburger Menu Icon */}

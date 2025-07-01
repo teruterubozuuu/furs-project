@@ -37,12 +37,12 @@ export default function RegisterPage() {
   return (
     <main className="h-full">
       <section className="flex justify-center items-center my-10">
-        <div className="md:w-[400px] border px-8 py-16 rounded-lg border-gray-400">
-          <h1 className="block text-center font-semibold text-xl mb-5">
+        <div className="md:w-[400px] border px-8 py-16 rounded-lg border-gray-300 shadow-lg">
+          <h1 className="block text-center font-bold text-2xl mb-5 text-[#2e7d32]">
             Create an account
           </h1>
 
-          <form className="space-y-4" onSubmit={handleSubmit}>
+          <form className="space-y-5 text-[#212121]" onSubmit={handleSubmit}>
             <div>
               <label htmlFor="username">Username</label>
               <br />
@@ -50,7 +50,7 @@ export default function RegisterPage() {
                 type="text"
                 name="username"
                 id="username"
-                className="border border-gray-500 w-full p-1 focus:outline-none rounded-sm"
+                className="border-b border-gray-300 w-full p-1 focus:outline-none"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 required
@@ -64,7 +64,7 @@ export default function RegisterPage() {
                 type="text"
                 name="email"
                 id="email"
-                className="border border-gray-500 w-full p-1 focus:outline-none rounded-sm"
+                className="border-b border-gray-300 w-full p-1 focus:outline-none"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -79,14 +79,14 @@ export default function RegisterPage() {
               <input
                 type="password"
                 name="password"
-                className="border border-gray-500 w-full p-1 rounded-sm focus:outline-none"
+                className="border-b border-gray-300 w-full p-1 focus:outline-none"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
               ></input>
             </div>
 
-            <button className="border border-gray-500 w-full p-2 rounded-sm cursor-pointer">
+            <button className="text-[#212121]  bg-[#fbc02d] font-medium w-full p-2 rounded-sm cursor-pointer">
               Sign up
             </button>
 
