@@ -12,6 +12,7 @@ export default function RegisterPage() {
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [userType, setUserType] = useState("");
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -25,6 +26,8 @@ export default function RegisterPage() {
 
       await setDoc(doc(db, "users", user.uid), {
         username: username,
+        email: email,
+        userType: userType,
       });
 
       console.log("Signed up successfully", userCredential.user);
@@ -86,11 +89,35 @@ export default function RegisterPage() {
               ></input>
             </div>
 
+            <div>
+              <label htmlFor="userType">User Type</label>
+              <br />
+              <select
+                id="userType"
+                className="border border-gray-500 w-full p-1 rounded-sm focus:outline-none"
+                value={userType}
+                onChange={(e) => setUserType(e.target.value)}
+                required
+              >
+                <option value="" disabled>
+                  Select a role
+                </option>
+                <option value="Community Volunteer">Community Volunteer</option>
+                <option value="Rescuer">Rescuer</option>
+                <option value="Adoption Coordinator">
+                  Adoption Coordinator
+                </option>
+              </select>
+            </div>
+
             <button className="text-[#212121]  bg-[#fbc02d] font-medium w-full p-2 rounded-sm cursor-pointer">
               Sign up
             </button>
 
-            <NavLink to="/login" className="text-sm block text-center cursor-pointer">
+            <NavLink
+              to="/login"
+              className="text-sm block text-center cursor-pointer"
+            >
               Already have an account? Login here
             </NavLink>
           </form>
