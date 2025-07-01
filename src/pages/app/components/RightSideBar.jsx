@@ -2,7 +2,7 @@ import React from 'react'
 
 export default function LeftSideBar() {
   return (
-    <div className="h-full border-l-1 border-gray-300 flex-none w-70 hidden xl:flex p-4">
+    <div className="h-full hidden xl:flex p-4 border border-gray-300">
           <div className="text-sm">
             <h1>Animal Welfare Organizations</h1>
             <ul>
