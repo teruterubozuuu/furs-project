@@ -1,6 +1,9 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-//import logo from "../../assets/your-logo.svg"; // Replace with the actual logo path
+import { auth, db, storage } from "../../../firebase/config";
+import { getDoc, addDoc, doc, collection, Timestamp } from "firebase/firestore";
+import { serverTimestamp } from "firebase/firestore";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
 export default function AddPost({ isOpen, onClose }) {
   const navigate = useNavigate();
@@ -16,6 +19,7 @@ export default function AddPost({ isOpen, onClose }) {
 
   const handlePhotoChange = (e) => {
     const file = e.target.files[0];
+
     if (file) {
       setPhoto(file);
       setPreview(URL.createObjectURL(file));
@@ -44,19 +48,67 @@ export default function AddPost({ isOpen, onClose }) {
     );
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
-    console.log({
-      photo,
+    const user = auth.currentUser;
+    if (!user) {
+      alert("User not logged in");
+      return;
+    }
+
+    if (!photo) {
+      alert("Please upload a photo.");
+      return;
+    }
+
+    let username = user.displayName || "Anonymous";
+
+    try {
+      const userDoc = await getDoc(doc(db, "users", user.uid));
+      if (userDoc.exists() && userDoc.data().username) {
+        username = userDoc.data().username;
+      }
+    } catch (error) {
+      console.error("Error fetching username from Firestore:", error);
+    }
+
+    // Upload photo
+    let photoURL = "";
+    try {
+      const storageRef = ref(
+        storage,
+        `posts/${user.uid}/${Date.now()}_${photo.name}`
+      );
+      const snapshot = await uploadBytes(storageRef, photo);
+      photoURL = await getDownloadURL(snapshot.ref);
+    } catch (error) {
+      console.error("Error uploading photo:", error);
+      alert("Failed to upload photo. Please try again.");
+      return;
+    }
+
+    // Create report data
+    const reportData = {
+      userId: user.uid,
+      username: username,
+      photoURL,
       breed,
       color,
       description,
       status,
       location,
-    });
+      createdAt: Timestamp.now(),
+    };
 
-    alert("Report submitted (mock only)");
+    try {
+      await addDoc(collection(db, "posts"), reportData);
+      alert("Report submitted successfully");
+      navigate("/home");
+    } catch (error) {
+      console.error("Error submitting report:", error);
+      alert("Failed to submit report. Please try again.");
+    }
 
     // Clear form
     setPhoto(null);

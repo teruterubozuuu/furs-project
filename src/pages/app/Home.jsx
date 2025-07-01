@@ -1,78 +1,121 @@
-import React from "react";
-import bantatayImg from "../../assets/bantatay.jpg";
-import dog from "../../assets/dog.jpg";
-import yujei from "../../assets/yujei (copy).jpg";
-import { useState } from "react";
+import React, { useEffect, useState } from "react";
 import AddPost from "./components/AddPost";
+import { db } from "../../firebase/config";
+import { collection, getDocs } from "firebase/firestore";
+import defaultImg from "../../assets/default_img.jpg";
 
 export default function Home() {
   const [isOpen, setIsOpen] = useState(false);
-  
+  const [posts, setPosts] = useState([]);
+
+  useEffect(() => {
+    const fetchPosts = async () => {
+      try {
+        const querySnapshot = await getDocs(collection(db, "posts"));
+        const fetchedPosts = querySnapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
+        setPosts(fetchedPosts);
+      } catch (error) {
+        console.error("Error fetching posts: ", error);
+      }
+    };
+    fetchPosts();
+  }, []);
+
   return (
-    <div className="max-w-[600px] h-auto space-y-4">
-      <div className="border border-gray-300 flex p-5 gap-2 items-center rounded-sm">
-        <img src={yujei} alt="User profile picture" className="w-15 rounded-full"/> 
-        <div value={isOpen} onClick={()=>setIsOpen(true)} className="border border-gray-300 flex-1 rounded-4xl cursor-pointer bg-gray-100 hover:bg-gray-200 transition duration-200 ease-in-out">
-          <button className="p-2 text-gray-500 font-medium cursor-pointer">Create a post</button>
+    <div className="max-w-[600px] mx-auto h-auto space-y-4">
+      {/* Create Post Section */}
+      <div className="border border-gray-300 flex flex-wrap sm:flex-nowrap items-center gap-3 p-4 rounded-sm">
+        <img
+          src={defaultImg}
+          alt="User profile picture"
+          className="w-10 h-10 rounded-full object-cover flex-shrink-0"
+        />
+        <div
+          onClick={() => setIsOpen(true)}
+          className="flex-1 border border-gray-300 rounded-3xl bg-gray-100 hover:bg-gray-200 transition duration-200 ease-in-out cursor-pointer"
+        >
+          <button className="w-full text-left p-2 text-gray-500 font-medium">
+            Create a post
+          </button>
         </div>
       </div>
 
-      <AddPost isOpen={isOpen} onClose={()=>setIsOpen(false)} />{/*show component when the button for posts is clicked*/}
+      <AddPost isOpen={isOpen} onClose={() => setIsOpen(false)} />
 
-      {/*Sample content*/}
-      <div className="border border-gray-300 p-5 rounded-sm">
-        <div className="border-b border-gray-200">
-          {/*Post header*/}
-          <div className="flex h-full items-center pb-2">
-            <img
-              src={bantatayImg}
-              alt="Bantatay Image"
-              className="w-15 h-15 rounded-full"
-            />
-            <div className=" pl-2 space-y">
-              <p className="text-xl"> Bantatay</p>
-              <span className="text-xs p-1 border border-gray-400 rounded-sm">
-                Stray Animal
-              </span>
+      {posts.length === 0 ? (
+        <div className="min-w-[600px] text-center text-gray-500 italic font-medium text-xl">
+          <h1>No Posts Yet</h1>
+        </div>
+      ) : (
+        posts.map((post) => (
+          <div key={post.id} className="border border-gray-300 p-5 rounded-sm">
+            {/* Post header */}
+            <div className="border-b border-gray-200">
+              <div className="flex h-full items-center pb-2">
+                <img
+                  src={defaultImg}
+                  alt="Profile"
+                  className="w-15 h-15 rounded-full"
+                />
+                <div className="pl-2 space-y-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <p className="text-xl">{post.username}</p>
+                    <p className="text-[12px] text-gray-600">
+                      {post.createdAt?.toDate
+                        ? post.createdAt.toDate().toLocaleString()
+                        : "Just now"}
+                    </p>
+                  </div>
+                  <span className="text-xs p-1 border border-gray-400 rounded-sm">
+                    {post.status}
+                  </span>
+                </div>
+              </div>
+
+              {/* Description */}
+              <p>{post.description}</p>
+
+              {/* Photo */}
+              <div className="flex justify-center p-3">
+                <img
+                  src={post.photoURL}
+                  alt="Posted"
+                  className="w-100 rounded-sm"
+                />
+              </div>
+
+              {/* Location */}
+              <div className="py-1 italic text-gray-400 text-sm">
+                {post.location
+                  ? `Latitude: ${post.location.lat.toFixed(
+                      5
+                    )}, Longitude: ${post.location.lng.toFixed(5)}`
+                  : "Location not available"}
+              </div>
+
+              {/* Dog characteristics */}
+              <div className="flex py-1 gap-3">
+                <span className="text-xs p-1 border border-gray-400 rounded-sm">
+                  {post.color}
+                </span>
+
+                <span className="text-xs p-1 border border-gray-400 rounded-sm">
+                  {post.breed}
+                </span>
+              </div>
+            </div>
+
+            <div className="flex flex-1 justify-between px-2 pt-3">
+              <p>Like</p>
+              <p>Comment</p>
+              <p>Repost</p>
             </div>
           </div>
-
-          {/*Description*/}
-
-          <p>
-            Hello! I've been seeing this dog roaming around our street. He's a
-            very good dog. Does it have an owner? I don't see any collar with an
-            identity tag.
-          </p>
-          <div className="flex justify-center p-3">
-            <img src={dog} alt="Dog" className="w-100 rounded-sm" />
-          </div>
-
-          {/*Location details*/}
-          <div className="py-1">
-            <span className="italic text-gray-400">
-              St. George Street, Sacred Heart Village, Caloocan City
-            </span>
-          </div>
-
-          {/*Dog characteristics*/}
-          <div className="flex py-1 gap-3">
-            <span className="text-xs p-1 border-1 border-gray-400 rounded-sm">
-              Bicolor Mixed
-            </span>
-
-            <span className="text-xs p-1 border-1 border-gray-400 rounded-sm">
-              Aspin
-            </span>
-          </div>
-        </div>
-
-        <div className="flex flex-1 justify-between px-2 pt-3">
-          <p>Like</p>
-          <p>Comment</p>
-          <p>Repost</p>
-        </div>
-      </div>
+        ))
+      )}
     </div>
   );
 }
