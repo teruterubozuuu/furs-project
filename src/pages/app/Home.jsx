@@ -21,7 +21,10 @@ export default function Home() {
         console.error("Error fetching posts: ", error);
       }
     };
+
+
     fetchPosts();
+
   }, []);
 
   return (

@@ -2,7 +2,6 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { auth, db, storage } from "../../../firebase/config";
 import { getDoc, addDoc, doc, collection, Timestamp } from "firebase/firestore";
-import { serverTimestamp } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
 export default function AddPost({ isOpen, onClose }) {
