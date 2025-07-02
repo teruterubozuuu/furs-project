@@ -7,7 +7,7 @@ import { useLocation } from "react-router-dom";
 
 export default function AppLayout({ children }) {
   const location = useLocation();
-  const hideSidebars = location.pathname === "/profile";
+  const hideSidebars = location.pathname === "/profile" || location.pathname === "/heatmap";
   const [loading,setLoading] = useState(true);
 
  useEffect(() => {

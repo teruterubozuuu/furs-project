@@ -10,6 +10,7 @@ import RedirectIfAuthenticated from "../routes/RedirectIfAuthenticated";
 import LandingPageLayout from "../pages/layout/LandingPageLayout";
 import AppLayout from "../pages/layout/AppLayout";
 import Profile from "../pages/app/Profile";
+import Heatmap from "../pages/app/Heatmap";
 
 function AppRoutes() {
   return (
@@ -89,6 +90,18 @@ function AppRoutes() {
             </RequireAuth>
           }
         />
+
+       <Route
+          path="/heatmap"
+          element={
+            <RequireAuth>
+              <AppLayout>
+                <Heatmap />
+              </AppLayout>
+            </RequireAuth>
+          }
+        />
+
       </Routes>
     </>
   );
