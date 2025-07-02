@@ -2,8 +2,7 @@ import { NavLink } from "react-router-dom";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { createUserWithEmailAndPassword } from "firebase/auth";
-import { auth } from "../firebase/config";
-import { db } from "../firebase/config";
+import { auth, db } from "../firebase/config";
 import { doc, setDoc } from "firebase/firestore";
 
 export default function RegisterPage() {
