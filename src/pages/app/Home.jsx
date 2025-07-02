@@ -14,7 +14,7 @@ export default function Home() {
         const querySnapshot = await getDocs(collection(db, "posts"));
         const fetchedPosts = querySnapshot.docs.map((doc) => ({
           id: doc.id,
-          ...doc.data(),
+          ...doc.data(), 
         }));
         setPosts(fetchedPosts);
       } catch (error) {
@@ -51,7 +51,7 @@ export default function Home() {
         </div>
       ) : (
         posts.map((post) => (
-          <div key={post.id} className="border border-gray-300 p-5 rounded-sm">
+          <div key={post.id} className="border border-gray-300 p-5 rounded-sm text-sm">
             {/* Post header */}
             <div className="border-b border-gray-200">
               <div className="flex h-full items-center pb-2">
@@ -62,8 +62,8 @@ export default function Home() {
                 />
                 <div className="pl-2 space-y-1">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <p className="text-xl">{post.username}</p>
-                    <p className="text-[12px] text-gray-600">
+                    <p className="text-base">{post.username}</p>
+                    <p className="text-[11px] text-gray-600">
                       {post.createdAt?.toDate
                         ? post.createdAt.toDate().toLocaleString()
                         : "Just now"}
@@ -108,7 +108,7 @@ export default function Home() {
               </div>
             </div>
 
-            <div className="flex flex-1 justify-between px-2 pt-3">
+            <div className="flex flex-1 justify-between px-2 pt-3 text-sm">
               <p>Like</p>
               <p>Comment</p>
               <p>Repost</p>

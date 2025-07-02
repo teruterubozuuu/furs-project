@@ -62,8 +62,8 @@ export default function AddPost({ isOpen, onClose }) {
       return;
     }
 
-    let username = user.displayName || "Anonymous";
-
+    //Get Username
+    let username = user.displayName;
     try {
       const userDoc = await getDoc(doc(db, "users", user.uid));
       if (userDoc.exists() && userDoc.data().username) {
@@ -101,9 +101,12 @@ export default function AddPost({ isOpen, onClose }) {
       createdAt: Timestamp.now(),
     };
 
+
+    // Add report to firestore database
     try {
       await addDoc(collection(db, "posts"), reportData);
       alert("Report submitted successfully");
+      onClose();
       navigate("/home");
     } catch (error) {
       console.error("Error submitting report:", error);

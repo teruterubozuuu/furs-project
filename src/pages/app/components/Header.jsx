@@ -57,7 +57,7 @@ export default function Header() {
                 type="button"
                 onClick={handleLogout}
                 aria-label="Logout"
-                className="text-xl text-[#fbc02d] px-3 py-2 hover:bg-[rgb(40,112,56)] rounded-[10px] duration-200 ease-in"
+                className="text-xl text-[#fbc02d] px-3 py-2 hover:bg-[rgb(40,112,56)] rounded-[10px] duration-200 ease-in cursor-pointer"
               >
                 <i className="bi bi-box-arrow-right"></i>
               </button>
