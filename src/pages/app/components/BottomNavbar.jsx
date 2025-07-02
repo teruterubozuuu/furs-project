@@ -1,9 +1,31 @@
-import React from "react";
 import { NavLink } from "react-router-dom";
+import { db } from "../../../firebase/config";
+import { useAuth } from "../../../context/AuthContext";
+import { doc, getDoc } from "firebase/firestore";
+import React, { useEffect, useState } from "react";
 
 export default function BottomNavbar() {
+    const [userType, setUserType] = useState("");
+    const { user } = useAuth();
+  
+    useEffect(() => {
+        const fetchUserData = async () => {
+          try {
+            const userDoc = await getDoc(doc(db, "users", user.uid));
+            if (userDoc.exists()) {
+              const data = userDoc.data();
+              setUserType(data.userType);
+            }
+          } catch (error) {
+            console.error("Error fetching user data: ", error);
+          }
+        };
+        fetchUserData();
+    },[]);
+    
+
   return (
-    <>
+    < >
       <nav className="fixed flex-1 m-0 bottom-0 left-0 right-0 bg-[#2e7d32]  xl:hidden xl:top-0 flex px-3 py-4 justify-around gap-4">
         <div>
           <NavLink
@@ -13,7 +35,7 @@ export default function BottomNavbar() {
           </NavLink>
         </div>
 
-        <div>
+        <div className={userType === "Rescuer" ? "flex" : "hidden"}>
           <NavLink
             to="/heatmap"
           >
@@ -21,7 +43,7 @@ export default function BottomNavbar() {
           </NavLink>
         </div>
 
-        <div>
+        <div className={userType === "Rescuer" || userType === "Adoption Coordinator" ? "hidden" : "flex"}>
           <NavLink
             to="/post"
           >
@@ -29,7 +51,7 @@ export default function BottomNavbar() {
           </NavLink>
         </div>
 
-        <div>
+        <div className={userType === "Rescuer" ? "hidden" : "flex"}>
           <NavLink
             to="/adoption"
           >
