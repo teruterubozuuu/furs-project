@@ -35,7 +35,6 @@ export default function Profile() {
     if (file) {
       const imageUrl = URL.createObjectURL(file);
       setProfilePhoto(imageUrl);
-      // You can also upload to Firebase Storage here if needed
     }
   };
 
@@ -48,7 +47,6 @@ const handleSave = async () => {
     const snapshot = await uploadBytes(storageRef, profilePhoto);
     const downloadURL = await getDownloadURL(snapshot.ref);
 
-    // Save the downloadURL to the user's document in Firestore
     const userRef = doc(db, "users", user.uid);
     await updateDoc(userRef, {
       profilePhoto: downloadURL,
