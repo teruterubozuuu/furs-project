@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import Header from "../app/components/Header";
 import RightSidebar from "../app/components/RightSideBar";
 import LeftSideBar from "../app/components/LeftSideBar";
@@ -7,7 +7,17 @@ import { useLocation } from "react-router-dom";
 
 export default function AppLayout({ children }) {
   const location = useLocation();
-  const hideSidebars = location.pathname === "/profile";
+  const hideSidebars = location.pathname === "/profile" || location.pathname === "/heatmap";
+  const [loading,setLoading] = useState(true);
+
+ useEffect(() => {
+    const timeout = setTimeout(()=>setLoading(false),900)
+    return ()=> clearTimeout(timeout);
+
+  },[]);
+
+    if (loading) return null;
+
   return (
     <div className="h-screen flex flex-col  bg-[#f5f5f5]">
       <Header />
