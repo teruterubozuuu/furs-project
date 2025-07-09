@@ -1,7 +1,4 @@
 import { Routes, Route } from "react-router-dom";
-import LPHome from "../pages/landingpage/LPHome";
-import LPAbout from "../pages/landingpage/LPAbout";
-import LPContact from "../pages/landingpage/LPContact";
 import LoginPage from "../pages/LoginPage";
 import RegisterPage from "../pages/RegisterPage";
 import Home from "../pages/app/Home";
@@ -11,6 +8,7 @@ import LandingPageLayout from "../pages/layout/LandingPageLayout";
 import AppLayout from "../pages/layout/AppLayout";
 import Profile from "../pages/app/Profile";
 import Heatmap from "../pages/app/Heatmap";
+import LandingPage from "../pages/landingpage/LandingPage";
 
 function AppRoutes() {
   return (
@@ -22,31 +20,12 @@ function AppRoutes() {
           element={
             <RedirectIfAuthenticated>
               <LandingPageLayout>
-                <LPHome />
+                <LandingPage/>
               </LandingPageLayout>
             </RedirectIfAuthenticated>
           }
         />
-        <Route
-          path="/about"
-          element={
-            <RedirectIfAuthenticated>
-              <LandingPageLayout>
-                <LPAbout />
-              </LandingPageLayout>
-            </RedirectIfAuthenticated>
-          }
-        />
-        <Route
-          path="/contact"
-          element={
-            <RedirectIfAuthenticated>
-              <LandingPageLayout>
-                <LPContact />
-              </LandingPageLayout>
-            </RedirectIfAuthenticated>
-          }
-        />
+        
         <Route
           path="/login"
           element={

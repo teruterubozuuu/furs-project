@@ -2,10 +2,12 @@ import { NavLink } from "react-router-dom";
 import { db } from "../../../firebase/config";
 import { useAuth } from "../../../context/AuthContext";
 import { doc, getDoc } from "firebase/firestore";
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
+import AddPost from "./AddPost"
 
 export default function BottomNavbar() {
     const [userType, setUserType] = useState("");
+    const [isOpen, setIsOpen] = useState(false);
     const { user } = useAuth();
   
     useEffect(() => {
@@ -44,12 +46,14 @@ export default function BottomNavbar() {
         </div>
 
         <div className={userType === "Rescuer" || userType === "Adoption Coordinator" ? "hidden" : "flex"}>
-          <NavLink
-            to="/post"
+          <button
+            onClick={() => setIsOpen(true)}
           >
             <i class="bi bi-plus-square text-[#fbc02d] block text-center text-lg"></i>
-          </NavLink>
+          </button>
         </div>
+
+        <AddPost isOpen = {isOpen} onClose={()=>setIsOpen(false)} />
 
         <div className={userType === "Rescuer" ? "hidden" : "flex"}>
           <NavLink

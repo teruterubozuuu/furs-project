@@ -56,9 +56,10 @@ export default function LoginPage() {
   };
 
   return (
-    <main className="h-full bg-[#f5f5f5]">
-      <section className="flex justify-center items-center my-10">
-        <div className="md:w-[400px] border px-8 py-16 rounded-lg border-gray-300 shadow-lg">
+    <>
+   <main className="h-screen bg-[url(/src/assets/app_bg2.png)] bg-cover bg-center flex xl:pt-20 pt-10 justify-center">
+    <section>
+    <div className="md:w-[400px] border relative z-80 px-8 py-16 rounded-lg bg-[#ffffff]/90 border-gray-300 shadow-xl">
           <h1 className="block text-center font-bold text-2xl mb-5 text-[#2e7d32]">
             Log in to your account
           </h1>
@@ -71,7 +72,7 @@ export default function LoginPage() {
                 type="text"
                 name="email"
                 id="email"
-                className="border-b border-gray-300 w-full p-1"
+                className="border-b border-gray-400 w-full p-1"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -85,7 +86,7 @@ export default function LoginPage() {
                 type="password"
                 name="password"
                 id="password"
-                className="border-b border-gray-300 w-full p-1"
+                className="border-b border-gray-400 w-full p-1"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
@@ -165,5 +166,6 @@ export default function LoginPage() {
         </div>
       </section>
     </main>
+    </>
   );
 }

@@ -35,7 +35,7 @@ export default function Heatmap() {
   }
 
   return (
-    <div className="max-w-[1000px] mx-auto h-auto space-y-4">
+    <div className="max-w-[1000px] mx-auto h-auto space-y-4  bg-[#fafafa]">
       <div className="border border-gray-300 flex flex-wrap sm:flex-nowrap items-center gap-3 p-4 rounded-sm overflow-hidden">
         <main className="w-screen space-y-2 p-2">
           <h1>Heatmap</h1>

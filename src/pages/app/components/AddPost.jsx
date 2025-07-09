@@ -48,8 +48,6 @@ export default function AddPost({ isOpen, onClose }) {
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-
     const user = auth.currentUser;
     if (!user) {
       alert("User not logged in");
