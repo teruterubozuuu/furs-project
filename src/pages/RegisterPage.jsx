@@ -11,7 +11,6 @@ export default function RegisterPage() {
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [userType, setUserType] = useState("");
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -26,7 +25,7 @@ export default function RegisterPage() {
       await setDoc(doc(db, "users", user.uid), {
         username: username,
         email: email,
-        userType: userType,
+        userType: 'Community Volunteer',
       });
 
       console.log("Signed up successfully", userCredential.user);
@@ -37,9 +36,10 @@ export default function RegisterPage() {
   };
 
   return (
-    <main className="h-full">
-      <section className="flex justify-center items-center my-10">
-        <div className="md:w-[400px] border px-8 py-16 rounded-lg border-gray-300 shadow-lg">
+    <>
+   <main className="h-screen bg-[url(/src/assets/app_bg2.png)] bg-cover bg-center flex xl:pt-20 pt-10 justify-center">
+    <section>
+    <div className="md:w-[400px] border relative z-80 px-8 py-16 rounded-lg bg-[#ffffff]/90 border-gray-300 shadow-xl">
           <h1 className="block text-center font-bold text-2xl mb-5 text-[#2e7d32]">
             Create an account
           </h1>
@@ -52,7 +52,7 @@ export default function RegisterPage() {
                 type="text"
                 name="username"
                 id="username"
-                className="border-b border-gray-300 w-full p-1 focus:outline-none"
+                className="border-b border-gray-400 w-full p-1 focus:outline-none"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 required
@@ -66,7 +66,7 @@ export default function RegisterPage() {
                 type="text"
                 name="email"
                 id="email"
-                className="border-b border-gray-300 w-full p-1 focus:outline-none"
+                className="border-b border-gray-400 w-full p-1 focus:outline-none"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -81,32 +81,11 @@ export default function RegisterPage() {
               <input
                 type="password"
                 name="password"
-                className="border-b border-gray-300 w-full p-1 focus:outline-none"
+                className="border-b border-gray-400 w-full p-1 focus:outline-none"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
               ></input>
-            </div>
-
-            <div>
-              <label htmlFor="userType">User Type</label>
-              <br />
-              <select
-                id="userType"
-                className="border border-gray-500 w-full p-1 rounded-sm focus:outline-none"
-                value={userType}
-                onChange={(e) => setUserType(e.target.value)}
-                required
-              >
-                <option value="" disabled>
-                  Select a role
-                </option>
-                <option value="Community Volunteer">Community Volunteer</option>
-                <option value="Rescuer">Rescuer</option>
-                <option value="Adoption Coordinator">
-                  Adoption Coordinator
-                </option>
-              </select>
             </div>
 
             <button className="text-[#212121]  bg-[#fbc02d] font-medium w-full p-2 rounded-sm cursor-pointer">
@@ -123,5 +102,6 @@ export default function RegisterPage() {
         </div>
       </section>
     </main>
+    </>
   );
 }

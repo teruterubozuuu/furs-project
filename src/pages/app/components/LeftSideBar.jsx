@@ -29,12 +29,12 @@ export default function LeftSideBar() {
     };
     fetchUsername();
     fetchRole();
-  }, [user]); //a dependency array to prevent this effect to run again ( ex. when typing, scrolling, etc.)
+  }, [user]); 
 
   return (
-    <div className="h-full hidden xl:flex xl:justify-center">
+    <div className="h-full hidden xl:flex xl:justify-center ">
       <div>
-        <div className="text-sm border border-gray-300 p-5 rounded-sm space-y-2 text-center">
+        <div className="text-sm border border-gray-300 p-5 rounded-sm space-y-2 text-center bg-[#fafafa]">
           <div className="flex justify-center"><img src={defaultImg} alt="temporary picture" className="w-30 rounded-full"/></div>{/*temporary picture*/}
           <h1 className="font-semibold">{username || 'Loading...'}</h1>
           <h2 className="font-medium">{role || 'Loading...'}</h2>

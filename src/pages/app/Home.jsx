@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import AddPost from "./components/AddPost";
 import { db } from "../../firebase/config";
-import { collection, getDocs } from "firebase/firestore";
+import { collection, getDocs, query, orderBy } from "firebase/firestore";
 import defaultImg from "../../assets/default_img.jpg";
 
 export default function Home() {
@@ -11,41 +11,49 @@ export default function Home() {
   useEffect(() => {
     const fetchPosts = async () => {
       try {
-        const querySnapshot = await getDocs(collection(db, "posts"));
+        const postsRef = collection(db, "posts");
+        const q = query(postsRef, orderBy("createdAt", "desc"));
+        const querySnapshot = await getDocs(q);
+
         const fetchedPosts = querySnapshot.docs.map((doc) => ({
           id: doc.id,
-          ...doc.data(), 
+          ...doc.data(),
         }));
+
         setPosts(fetchedPosts);
       } catch (error) {
         console.error("Error fetching posts: ", error);
       }
     };
 
-
     fetchPosts();
-
   }, []);
 
   return (
-    <div className="max-w-[600px] mx-auto h-auto space-y-4">
-      {/* Create Post Section */}
-      <div className="border border-gray-300 flex flex-wrap sm:flex-nowrap items-center gap-3 p-4 rounded-sm">
-        <img
-          src={defaultImg}
-          alt="User profile picture"
-          className="w-10 h-10 rounded-full object-cover flex-shrink-0"
-        />
-        <div
-          onClick={() => setIsOpen(true)}
-          className="flex-1 border border-gray-300 rounded-3xl bg-gray-100 hover:bg-gray-200 transition duration-200 ease-in-out cursor-pointer"
-        >
-          <button className="w-full text-left p-2 text-gray-500 font-medium">
-            Create a post
-          </button>
+    <div className="max-w-[800px] mx-auto h-auto space-y-4">
+      <div className="flex justify-between items-stretch gap-3">
+        <div className="flex-1 flex flex-wrap sm:flex-nowrap items-center gap-3 p-4 rounded-sm border border-gray-300 bg-[#fafafa]">
+          <img
+            src={defaultImg}
+            alt="User profile picture"
+            className="w-8 h-8 rounded-full object-cover flex-shrink-0"
+          />
+          <div
+            onClick={() => setIsOpen(true)}
+            className="flex-1 border border-gray-300 cursor-pointer rounded-3xl bg-gray-100 hover:bg-gray-200 transition duration-200 ease-in-out"
+          >
+            <p className="w-full text-left p-2 text-gray-500 font-medium cursor-pointer">
+              Create a post
+            </p>
+          </div>
+        </div>
+
+        {/* Filter section */}
+        <div className="bg-[#fafafa] flex flex-col items-center justify-center text-gray-500 border-gray-300 border rounded-sm p-4 hover:bg-gray-200 transition-all duration-200 ease-in-out cursor-pointer">
+          <i className="bi bi-filter text-2xl"></i>
+          <p className="text-[10px]">Filter</p>
         </div>
       </div>
-
       <AddPost isOpen={isOpen} onClose={() => setIsOpen(false)} />
 
       {posts.length === 0 ? (
@@ -54,7 +62,10 @@ export default function Home() {
         </div>
       ) : (
         posts.map((post) => (
-          <div key={post.id} className="border border-gray-300 p-5 rounded-sm text-sm">
+          <div
+            key={post.id}
+            className=" bg-[#fafafa] border border-gray-300 p-5 rounded-sm text-sm"
+          >
             {/* Post header */}
             <div className="border-b border-gray-200">
               <div className="flex h-full items-center pb-2">
@@ -72,7 +83,15 @@ export default function Home() {
                         : "Just now"}
                     </p>
                   </div>
-                  <span className="text-xs p-1 border border-gray-400 rounded-sm">
+                  <span
+                    className={`text-xs p-1 border rounded-sm ${
+                      post.status === "Stray"
+                        ? "bg-green-100 text-green-700 border-green-300"
+                        : post.status === "Lost Pet"
+                        ? "bg-yellow-100 text-yellow-700 border-yellow-300"
+                        : "bg-gray-100 text-gray-700 border-gray-300"
+                    }`}
+                  >
                     {post.status}
                   </span>
                 </div>

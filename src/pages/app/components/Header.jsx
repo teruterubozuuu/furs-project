@@ -6,7 +6,7 @@ import { useNavigate } from "react-router-dom";
 import TopNavbar from "../components/TopNavbar";
 import { confirmAlert } from "react-confirm-alert";
 import "react-confirm-alert/src/react-confirm-alert.css";
-import logo from "../../../assets/logo.png";
+import logo from "../../../assets/logo_icon.png";
 
 export default function Header() {
   const navigate = useNavigate();
