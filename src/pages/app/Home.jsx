@@ -32,7 +32,7 @@ export default function Home() {
   return (
     <div className="max-w-[800px] mx-auto h-auto space-y-4">
       <div className="flex justify-between items-stretch gap-3">
-        <div className="flex-1 flex flex-wrap sm:flex-nowrap items-center gap-3 p-4 rounded-sm border border-gray-300 bg-[#fafafa]">
+        <div className="flex-1 flex flex-wrap sm:flex-nowrap items-center gap-3 p-4 rounded-sm border border-gray-200 shadow-sm bg-[#fafafa]">
           <img
             src={defaultImg}
             alt="User profile picture"
@@ -49,7 +49,7 @@ export default function Home() {
         </div>
 
         {/* Filter section */}
-        <div className="bg-[#fafafa] flex flex-col items-center justify-center text-gray-500 border-gray-300 border rounded-sm p-4 hover:bg-gray-200 transition-all duration-200 ease-in-out cursor-pointer">
+        <div className="bg-[#fafafa] flex flex-col items-center justify-center text-gray-500 border-gray-200 shadow-sm border rounded-sm p-4 hover:bg-gray-200 transition-all duration-200 ease-in-out cursor-pointer">
           <i className="bi bi-filter text-2xl"></i>
           <p className="text-[10px]">Filter</p>
         </div>
@@ -64,7 +64,7 @@ export default function Home() {
         posts.map((post) => (
           <div
             key={post.id}
-            className=" bg-[#fafafa] border border-gray-300 p-5 rounded-sm text-sm"
+            className=" bg-[#fafafa] border border-gray-200 shadow-sm p-5 rounded-sm text-sm"
           >
             {/* Post header */}
             <div className="border-b border-gray-200">
@@ -130,10 +130,19 @@ export default function Home() {
               </div>
             </div>
 
-            <div className="flex flex-1 justify-between px-2 pt-3 text-sm">
-              <p>Like</p>
-              <p>Comment</p>
-              <p>Repost</p>
+            <div className="flex flex-1 justify-between xl:justify-around px-2 pt-3 text-sm text-gray-500 font-medium">
+              <div className="flex items-center gap-2">
+                <i class="bi bi-hand-thumbs-up"></i>
+                <p>Like</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <i class="bi bi-chat"></i>
+                <p>Comment</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <i class="bi bi-arrow-90deg-right"></i>
+                <p>Repost</p>
+              </div>
             </div>
           </div>
         ))

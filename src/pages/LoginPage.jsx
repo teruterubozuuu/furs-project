@@ -64,7 +64,7 @@ export default function LoginPage() {
             Log in to your account
           </h1>
 
-          <form className="space-y-5 text-[#212121]" onSubmit={handleSubmit}>
+          <form className="space-y-5 text-gray-700" onSubmit={handleSubmit}>
             <div>
               <label htmlFor="email">Email</label>
               <br />
@@ -110,7 +110,7 @@ export default function LoginPage() {
             </div>
 
             <button
-              className="w-full p-2 rounded-[10px] cursor-pointer text-[#212121] font-medium bg-[#fbc02d]"
+              className="w-full p-2 rounded-[10px] cursor-pointer text-[#212121] font-semibold bg-[#fbc02d]"
               type="submit"
             >
               Login
@@ -118,7 +118,7 @@ export default function LoginPage() {
 
             <NavLink
               to="/signup"
-              className="text-sm block text-center cursor-pointer text-[#212121] font-medium"
+              className="text-sm block text-center cursor-pointer font-medium"
             >
               Don't have an account yet? Sign up here
             </NavLink>
@@ -164,7 +164,7 @@ export default function LoginPage() {
             </div>
           </form>
         </div>
-      </section>
+        </section>
     </main>
     </>
   );

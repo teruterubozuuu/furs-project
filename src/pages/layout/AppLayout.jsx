@@ -28,7 +28,7 @@ export default function AppLayout({ children }) {
           <LeftSideBar />
         </aside>
       )}
-        <div className="flex flex-col overflow-y-auto">
+        <div className="flex flex-col overflow-y-auto custom-scrollbar">
           <main className="flex-1 justify-center overflow-y-auto h-screen font-[Inter] pb-[70px] xl:pb-0 ">
             {children}
           </main>

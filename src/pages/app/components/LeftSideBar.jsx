@@ -34,10 +34,10 @@ export default function LeftSideBar() {
   return (
     <div className="h-full hidden xl:flex xl:justify-center ">
       <div>
-        <div className="text-sm border border-gray-300 p-5 rounded-sm space-y-2 text-center bg-[#fafafa]">
+        <div className="text-sm border border-gray-200 shadow-sm p-5 rounded-sm space-y-2 text-center bg-[#fafafa]">
           <div className="flex justify-center"><img src={defaultImg} alt="temporary picture" className="w-30 rounded-full"/></div>{/*temporary picture*/}
           <h1 className="font-semibold">{username || 'Loading...'}</h1>
-          <h2 className="font-medium">{role || 'Loading...'}</h2>
+          <h2 className="font-medium text-gray-500">{role || 'Loading...'}</h2>
           <p className="text-gray-400 italic">Add a description...</p>
         </div>
       </div>
