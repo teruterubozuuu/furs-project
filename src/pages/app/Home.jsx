@@ -13,22 +13,48 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const fetchPosts = async () => {
+    const fetchAllPosts = async () => {
+      setIsLoading(true);
       try {
-        const postsRef = collection(db, "posts");
-        const q = query(postsRef, orderBy("createdAt", "desc"));
-        const querySnapshot = await getDocs(q);
+        const strayRef = collection(db, "stray_animal_posts");
+        const lostRef = collection(db, "lost_pet_posts");
+        const unknownRef = collection(db, "unknown_status");
 
-        const fetchedPosts = querySnapshot.docs.map((doc) => ({
+        const [straySnap, lostSnap, unknownSnap] = await Promise.all([
+          getDocs(query(strayRef, orderBy("createdAt", "desc"))),
+          getDocs(query(lostRef, orderBy("createdAt", "desc"))),
+          getDocs(query(unknownRef, orderBy("createdAt", "desc"))),
+        ]);
+
+        const strayPosts = straySnap.docs.map((doc) => ({
           id: doc.id,
           ...doc.data(),
+          type: "Stray",
         }));
 
-        {
-          /*OpenStreetMap Reverse Geocoding*/
-        }
+        const lostPosts = lostSnap.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+          type: "Lost",
+        }));
+
+        const unknownPosts = unknownSnap.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+          type: "Unknown",
+        }));
+
+        const combined = [...strayPosts, ...lostPosts, ...unknownPosts].sort(
+          (a, b) => {
+            const aDate = a.createdAt?.toDate?.() || new Date(0);
+            const bDate = b.createdAt?.toDate?.() || new Date(0);
+            return bDate - aDate;
+          }
+        );
+
+        // Perform reverse geocoding
         const updatedPosts = await Promise.all(
-          fetchedPosts.map(async (post) => {
+          combined.map(async (post) => {
             if (post.location?.lat && post.location?.lng) {
               const url = `https://nominatim.openstreetmap.org/reverse?lat=${post.location.lat}&lon=${post.location.lng}&format=json&accept-language=en`;
               try {
@@ -46,14 +72,14 @@ export default function Home() {
         );
 
         setPosts(updatedPosts);
-        setIsLoading(false);
       } catch (error) {
-        console.error("Error fetching posts: ", error);
+        console.error("Error fetching posts:", error);
+      } finally {
         setIsLoading(false);
       }
     };
 
-    fetchPosts();
+    fetchAllPosts();
   }, []);
 
   return (
@@ -87,7 +113,7 @@ export default function Home() {
 
       <Filter isOpen={isOpenFilter} onClose={() => setIsOpenFilter(false)} />
       <AddPost isOpen={isOpenPost} onClose={() => setIsOpenPost(false)} />
-        
+
       {isLoading ? (
         <div className="flex justify-center py-10">
           <OrbitProgress color="#2e7d32" size="large" />
@@ -122,7 +148,7 @@ export default function Home() {
                   <span
                     className={`text-xs p-1 border rounded-sm ${
                       post.status === "Stray"
-                        ? "bg-green-100 text-green-700 border-green-300"
+                        ? "bg-red-100 text-red-700 border-red-300"
                         : post.status === "Lost Pet"
                         ? "bg-yellow-100 text-yellow-700 border-yellow-300"
                         : "bg-gray-100 text-gray-700 border-gray-300"
@@ -138,12 +164,12 @@ export default function Home() {
 
               {/* Dog characteristics */}
               <div className="flex py-1 gap-3">
-                <span className="text-xs p-1 border border-gray-400 rounded-sm">
+                <span className="text-xs p-1 border bg-green-100 text-green-700 border-green-300 rounded-sm">
                   {post.color}
                 </span>
 
                 {post.breed && (
-                  <span className="text-xs p-1 border border-gray-400 rounded-sm">
+                  <span className="text-xs p-1 border bg-green-100 text-green-700 border-green-300  rounded-sm">
                     {post.breed}
                   </span>
                 )}

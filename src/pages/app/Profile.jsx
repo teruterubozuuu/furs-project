@@ -23,6 +23,9 @@ export default function Profile() {
           const data = userDoc.data();
           setUsername(data.username);
           setRole(data.userType);
+        } else{
+          setUsername(user.displayName)
+          setRole("Community Volunteer")
         }
       } catch (error) {
         console.error("Error fetching user data: ", error);
