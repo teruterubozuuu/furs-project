@@ -44,7 +44,7 @@ export default function RegisterPage() {
             Create an account
           </h1>
 
-          <form className="space-y-5 text-[#212121]" onSubmit={handleSubmit}>
+          <form className="space-y-5 text-gray-700" onSubmit={handleSubmit}>
             <div>
               <label htmlFor="username">Username</label>
               <br />

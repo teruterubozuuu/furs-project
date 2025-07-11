@@ -12,7 +12,7 @@ export default function LPHome() {
           Find, Unite, and Rescue Strays
         </h1>
         <p className="xl:text-xl text-[#656565]">
-          F.U.R.S. is a community-driven platform to report stray and lost animal sightings, and to help rescuers identify areas with significant stray animal density.
+          F.U.R.S. is a community-driven platform to report stray animal sightings, and to help rescuers identify areas with significant stray animal density.
         </p>
         <p className="xl:text-xl text-[#656565]">Join our community now!</p>
         <NavLink

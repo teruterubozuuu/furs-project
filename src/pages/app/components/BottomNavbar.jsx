@@ -41,7 +41,7 @@ export default function BottomNavbar() {
           <NavLink
             to="/heatmap"
           >
-            <i class="bi bi-radar text-[#fbc02d] block text-center text-lg"></i>
+            <i className="bi bi-radar text-[#fbc02d] block text-center text-lg"></i>
           </NavLink>
         </div>
 
@@ -49,7 +49,7 @@ export default function BottomNavbar() {
           <button
             onClick={() => setIsOpen(true)}
           >
-            <i class="bi bi-plus-square text-[#fbc02d] block text-center text-lg"></i>
+            <i className="bi bi-plus-square text-[#fbc02d] block text-center text-lg"></i>
           </button>
         </div>
 
@@ -59,7 +59,7 @@ export default function BottomNavbar() {
           <NavLink
             to="/adoption"
           >
-            <i class="bi bi-search-heart text-[#fbc02d]  block text-center text-lg"></i>
+            <i className="bi bi-search-heart text-[#fbc02d]  block text-center text-lg"></i>
           </NavLink>
         </div>
 
@@ -67,12 +67,12 @@ export default function BottomNavbar() {
           <NavLink
             to="/organizations"
           >
-            <i class="bi bi-people  text-[#fbc02d]  block text-center text-lg"></i>
+            <i className="bi bi-people  text-[#fbc02d]  block text-center text-lg"></i>
           </NavLink>
         </div>
 
         <div className="xl:hidden">
-          <i class="bi bi-list text-[#fbc02d]  block text-center text-lg"></i>
+          <i className="bi bi-list text-[#fbc02d]  block text-center text-lg"></i>
         </div>
       </nav>
     </>

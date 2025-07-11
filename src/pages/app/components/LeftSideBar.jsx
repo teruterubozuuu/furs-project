@@ -10,34 +10,37 @@ export default function LeftSideBar() {
   const [role,setRole] = useState("");
 
   useEffect(() => {
-    const fetchUsername = async () => {
-      try {
-        const userDoc = await getDoc(doc(db, "users", user.uid));
-        setUsername(userDoc.data().username);
-      } catch (error) {
-        console.error("Error fetching username: ", error);
-      }
-    };
+  const fetchUserDetails = async () => {
+    if (!user) return;
 
-    const fetchRole = async () => {
-      try {
-        const userDoc = await getDoc(doc(db, "users", user.uid));
-        setRole(userDoc.data().userType);
-      } catch (error) {
-        console.error("Error fetching user role: ", error);
+    try {
+      const userDoc = await getDoc(doc(db, "users", user.uid));
+
+      if (userDoc.exists()) {
+        const data = userDoc.data();
+        setUsername(data.username || user.displayName);
+        setRole(data.userType || "");
+      } else {
+        setUsername(user.displayName || "Unnamed");
+        setRole("Community Volunteer");
       }
-    };
-    fetchUsername();
-    fetchRole();
-  }, [user]); 
+    } catch (error) {
+      console.error("Error fetching user data:", error);
+      setUsername(user.displayName || "Unnamed");
+      setRole("");
+    }
+  };
+
+  fetchUserDetails();
+}, [user]);
 
   return (
     <div className="h-full hidden xl:flex xl:justify-center ">
       <div>
-        <div className="text-sm border border-gray-300 p-5 rounded-sm space-y-2 text-center bg-[#fafafa]">
+        <div className="text-sm border border-gray-200 shadow-sm p-7 rounded-sm space-y-2 text-center bg-[#fafafa]">
+          <h1 className="font-semibold text-[rgb(40,112,56)] text-lg">{role || 'Loading...'}</h1>
           <div className="flex justify-center"><img src={defaultImg} alt="temporary picture" className="w-30 rounded-full"/></div>{/*temporary picture*/}
-          <h1 className="font-semibold">{username || 'Loading...'}</h1>
-          <h2 className="font-medium">{role || 'Loading...'}</h2>
+          <h2 className="font-semibold">{username || 'Loading...'}</h2>
           <p className="text-gray-400 italic">Add a description...</p>
         </div>
       </div>
