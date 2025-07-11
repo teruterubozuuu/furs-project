@@ -20,7 +20,7 @@ export default function AppLayout({ children }) {
     if (loading) return null;
 
   return (
-    <div className="h-screen flex flex-col  bg-[#f5f5f5]">
+    <div className="h-screen flex flex-col ">
       <Header />
       <div className="flex flex-1 overflow-hidden justify-center p-5 gap-4 bg-[url('/src/assets/app_bg.png')] bg-cover bg-no-repeat bg-center bg-fixed">
               {!hideSidebars && (
@@ -29,7 +29,7 @@ export default function AppLayout({ children }) {
         </aside>
       )}
         <div className="flex flex-col overflow-y-auto custom-scrollbar">
-          <main className="flex-1 justify-center overflow-y-auto h-screen font-[Inter] pb-[70px] xl:pb-0 ">
+          <main className="flex-1 justify-center overflow-y-auto h-screen font-[Inter] pb-[70px] xl:pb-0">
             {children}
           </main>
           <BottomNavbar />

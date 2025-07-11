@@ -48,6 +48,7 @@ export default function AddPost({ isOpen, onClose }) {
   };
 
   const handleSubmit = async (e) => {
+    e.preventDefault();
     const user = auth.currentUser;
     if (!user) {
       alert("User not logged in");
@@ -97,7 +98,6 @@ export default function AddPost({ isOpen, onClose }) {
       location,
       createdAt: Timestamp.now(),
     };
-
 
     // Add report to firestore database
     try {
@@ -222,7 +222,7 @@ export default function AddPost({ isOpen, onClose }) {
           </div>
 
           {/* Location */}
-          <div>
+          <div className="space-y-3">
             <label className="block text-sm font-medium mb-1">Location</label>
             <button
               type="button"
@@ -237,6 +237,13 @@ export default function AddPost({ isOpen, onClose }) {
                 {location.lat.toFixed(5)}, {location.lng.toFixed(5)}
               </p>
             )}
+
+            <button
+              type="button"
+              className="bg-blue-500 text-white py-2 rounded-md text-sm hover:bg-blue-600 w-full"
+            >
+              Pin location
+            </button>
           </div>
 
           {/* Submit */}

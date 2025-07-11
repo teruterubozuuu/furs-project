@@ -3,10 +3,14 @@ import AddPost from "./components/AddPost";
 import { db } from "../../firebase/config";
 import { collection, getDocs, query, orderBy } from "firebase/firestore";
 import defaultImg from "../../assets/default_img.jpg";
+import { OrbitProgress } from "react-loading-indicators";
+import Filter from "./components/Filter";
 
 export default function Home() {
-  const [isOpen, setIsOpen] = useState(false);
+  const [isOpenPost, setIsOpenPost] = useState(false);
+  const [isOpenFilter, setIsOpenFilter] = useState(false);
   const [posts, setPosts] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const fetchPosts = async () => {
@@ -20,9 +24,32 @@ export default function Home() {
           ...doc.data(),
         }));
 
-        setPosts(fetchedPosts);
+        {
+          /*OpenStreetMap Reverse Geocoding*/
+        }
+        const updatedPosts = await Promise.all(
+          fetchedPosts.map(async (post) => {
+            if (post.location?.lat && post.location?.lng) {
+              const url = `https://nominatim.openstreetmap.org/reverse?lat=${post.location.lat}&lon=${post.location.lng}&format=json&accept-language=en`;
+              try {
+                const response = await fetch(url);
+                const data = await response.json();
+                const address = data.display_name || "Address not found";
+                return { ...post, address };
+              } catch (error) {
+                console.error("Reverse geocoding error:", error);
+                return { ...post, address: "Address error" };
+              }
+            }
+            return { ...post, address: "No coordinates" };
+          })
+        );
+
+        setPosts(updatedPosts);
+        setIsLoading(false);
       } catch (error) {
         console.error("Error fetching posts: ", error);
+        setIsLoading(false);
       }
     };
 
@@ -30,16 +57,16 @@ export default function Home() {
   }, []);
 
   return (
-    <div className="max-w-[800px] mx-auto h-auto space-y-4">
-      <div className="flex justify-between items-stretch gap-3">
-        <div className="flex-1 flex flex-wrap sm:flex-nowrap items-center gap-3 p-4 rounded-sm border border-gray-200 shadow-sm bg-[#fafafa]">
+    <div className="max-w-[700px] space-y-4">
+      <div className=" flex justify-between items-stretch gap-2">
+        <div className="flex-1 w-[700px] flex flex-wrap sm:flex-nowrap items-center gap-3 p-4 rounded-sm border border-gray-200 shadow-sm bg-[#fafafa]">
           <img
             src={defaultImg}
             alt="User profile picture"
             className="w-8 h-8 rounded-full object-cover flex-shrink-0"
           />
           <div
-            onClick={() => setIsOpen(true)}
+            onClick={() => setIsOpenPost(true)}
             className="flex-1 border border-gray-300 cursor-pointer rounded-3xl bg-gray-100 hover:bg-gray-200 transition duration-200 ease-in-out"
           >
             <p className="w-full text-left p-2 text-gray-500 font-medium cursor-pointer">
@@ -49,16 +76,25 @@ export default function Home() {
         </div>
 
         {/* Filter section */}
-        <div className="bg-[#fafafa] flex flex-col items-center justify-center text-gray-500 border-gray-200 shadow-sm border rounded-sm p-4 hover:bg-gray-200 transition-all duration-200 ease-in-out cursor-pointer">
+        <div
+          onClick={() => setIsOpenFilter(true)}
+          className="bg-[#fafafa] flex flex-col items-center justify-center text-gray-500 border-gray-200 shadow-sm border rounded-sm p-4 hover:bg-gray-200 transition-all duration-200 ease-in-out cursor-pointer"
+        >
           <i className="bi bi-filter text-2xl"></i>
           <p className="text-[10px]">Filter</p>
         </div>
       </div>
-      <AddPost isOpen={isOpen} onClose={() => setIsOpen(false)} />
 
-      {posts.length === 0 ? (
-        <div className="min-w-[600px] text-center text-gray-500 italic font-medium text-xl">
-          <h1>No Posts Yet</h1>
+      <Filter isOpen={isOpenFilter} onClose={() => setIsOpenFilter(false)} />
+      <AddPost isOpen={isOpenPost} onClose={() => setIsOpenPost(false)} />
+        
+      {isLoading ? (
+        <div className="flex justify-center py-10">
+          <OrbitProgress color="#2e7d32" size="large" />
+        </div>
+      ) : posts.length === 0 ? (
+        <div className="flex justify-center text-gray-500 italic font-medium text-xl">
+          <p>No posts yet...</p>
         </div>
       ) : (
         posts.map((post) => (
@@ -100,6 +136,19 @@ export default function Home() {
               {/* Description */}
               <p>{post.description}</p>
 
+              {/* Dog characteristics */}
+              <div className="flex py-1 gap-3">
+                <span className="text-xs p-1 border border-gray-400 rounded-sm">
+                  {post.color}
+                </span>
+
+                {post.breed && (
+                  <span className="text-xs p-1 border border-gray-400 rounded-sm">
+                    {post.breed}
+                  </span>
+                )}
+              </div>
+
               {/* Photo */}
               <div className="flex justify-center p-3">
                 <img
@@ -111,22 +160,13 @@ export default function Home() {
 
               {/* Location */}
               <div className="py-1 italic text-gray-400 text-sm">
-                {post.location
+                {post.address
+                  ? post.address
+                  : post.location
                   ? `Latitude: ${post.location.lat.toFixed(
                       5
                     )}, Longitude: ${post.location.lng.toFixed(5)}`
                   : "Location not available"}
-              </div>
-
-              {/* Dog characteristics */}
-              <div className="flex py-1 gap-3">
-                <span className="text-xs p-1 border border-gray-400 rounded-sm">
-                  {post.color}
-                </span>
-
-                <span className="text-xs p-1 border border-gray-400 rounded-sm">
-                  {post.breed}
-                </span>
               </div>
             </div>
 
