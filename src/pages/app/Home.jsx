@@ -5,12 +5,17 @@ import { collection, getDocs, query, orderBy } from "firebase/firestore";
 import defaultImg from "../../assets/default_img.jpg";
 import { OrbitProgress } from "react-loading-indicators";
 import Filter from "./components/Filter";
+import { useAuth } from "../../context/AuthContext";
+import {doc,getDoc} from "firebase/firestore"
+
 
 export default function Home() {
   const [isOpenPost, setIsOpenPost] = useState(false);
   const [isOpenFilter, setIsOpenFilter] = useState(false);
   const [posts, setPosts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [userType,setUserType] = useState(""); 
+  const { user } = useAuth();
 
   useEffect(() => {
     const fetchAllPosts = async () => {
@@ -52,7 +57,13 @@ export default function Home() {
           }
         );
 
-        // Perform reverse geocoding
+        const userDoc = await getDoc(doc(db,"users", user.uid));
+        if (userDoc.exists()) {
+          const data = userDoc.data();
+          setUserType(data.userType || "");
+        }
+
+
         const updatedPosts = await Promise.all(
           combined.map(async (post) => {
             if (post.location?.lat && post.location?.lng) {
@@ -84,8 +95,10 @@ export default function Home() {
 
   return (
     <div className="max-w-[700px] space-y-4">
-      <div className=" flex justify-between items-stretch gap-2">
-        <div className="flex-1 w-[700px] flex flex-wrap sm:flex-nowrap items-center gap-3 p-4 rounded-sm border border-gray-200 shadow-sm bg-[#fafafa]">
+      <div className=" flex flex-1 flex-wrap sm:flex-nowrap max-w-[700px]  justify-between items-stretch gap-2">
+
+      {userType !== "" && (
+        <div className={userType === "Rescuer" ? "hidden" : "flex-1 flex flex-wrap sm:flex-nowrap items-center gap-3 p-4 rounded-sm border border-gray-200 shadow-sm bg-[#fafafa]"}>
           <img
             src={defaultImg}
             alt="User profile picture"
@@ -100,7 +113,8 @@ export default function Home() {
             </p>
           </div>
         </div>
-
+      )}
+        
         {/* Filter section */}
         <div
           onClick={() => setIsOpenFilter(true)}

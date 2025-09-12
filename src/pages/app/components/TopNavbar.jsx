@@ -75,20 +75,6 @@ export default function TopNavbar() {
 
        <AddPost isOpen = {isOpen} onClose={()=>setIsOpen(false)} />
 
-      <div className={userType === "Rescuer" ? "hidden" : "flex flex-col items-center"}>
-        <NavLink
-          to="/adoption"
-          className={({ isActive }) =>
-            isActive
-              ? "text-xl text-[#fbc02d] px-3 py-2 bg-[rgb(40,112,56)] rounded-[10px] duration-200 ease-in"
-              : "text-xl text-[#fbc02d] px-3 py-2 hover:bg-[rgb(40,112,56)] rounded-[10px] duration-200 ease-in"
-          }
-        >
-          <i className="bi bi-search-heart"></i>
-        </NavLink>
-        <span className="text-xs text-[#f5f5f5] mt-1">Adoption</span>
-      </div>
-
       <div className="flex flex-col items-center">
         <NavLink
           to="/organizations"
