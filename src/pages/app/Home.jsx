@@ -1,4 +1,9 @@
 import React, { useEffect, useState } from "react";
+// 🚨 NEW IMPORTS
+import { Link } from "react-router-dom";
+import { useAuth } from "../../context/AuthContext"; // Assuming the path to your AuthContext is correct
+// ----------------
+
 import AddPost from "./components/AddPost";
 import { db } from "../../firebase/config";
 import { collection, getDocs, query, orderBy } from "firebase/firestore";
@@ -7,6 +12,7 @@ import { OrbitProgress } from "react-loading-indicators";
 import Filter from "./components/Filter";
 
 export default function Home() {
+  const { user } = useAuth(); // 🚨 NEW: Get logged-in user
   const [isOpenPost, setIsOpenPost] = useState(false);
   const [isOpenFilter, setIsOpenFilter] = useState(false);
   const [posts, setPosts] = useState([]);
@@ -16,6 +22,7 @@ export default function Home() {
     const fetchAllPosts = async () => {
       setIsLoading(true);
       try {
+        // NOTE: Including 'unknown_status' collection
         const strayRef = collection(db, "stray_animal_posts");
         const lostRef = collection(db, "lost_pet_posts");
         const unknownRef = collection(db, "unknown_status");
@@ -123,95 +130,110 @@ export default function Home() {
           <p>No posts yet...</p>
         </div>
       ) : (
-        posts.map((post) => (
-          <div
-            key={post.id}
-            className=" bg-[#fafafa] border border-gray-200 shadow-sm p-5 rounded-sm text-sm"
-          >
-            {/* Post header */}
-            <div className="border-b border-gray-200">
-              <div className="flex h-full items-center pb-2">
-                <img
-                  src={defaultImg}
-                  alt="Profile"
-                  className="w-15 h-15 rounded-full"
-                />
-                <div className="pl-2 space-y-1">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <p className="text-base">{post.username}</p>
-                    <p className="text-[11px] text-gray-600">
-                      {post.createdAt?.toDate
-                        ? post.createdAt.toDate().toLocaleString()
-                        : "Just now"}
-                    </p>
+        posts.map((post) => {
+          // 🚨 NEW LOGIC: Determine the profile path
+          const profilePath =
+            post.userId === user?.uid ? "/profile" : `/profile/${post.userId}`;
+
+          return (
+            <div
+              key={post.id}
+              className=" bg-[#fafafa] border border-gray-200 shadow-sm p-5 rounded-sm text-sm"
+            >
+              {/* Post header */}
+              <div className="border-b border-gray-200">
+                <div className="flex h-full items-center pb-2">
+                  {/* Avatar/Image is here */}
+                  <img
+                    src={defaultImg}
+                    alt="Profile"
+                    className="w-15 h-15 rounded-full"
+                  />
+
+                  <div className="pl-2 space-y-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {/* 🚨 NEW: Make the username clickable */}
+                      <Link
+                        to={profilePath}
+                        className="text-base font-semibold hover:underline cursor-pointer"
+                      >
+                        {post.username}
+                      </Link>
+                      {/* ---------------------------------- */}
+                      <p className="text-[11px] text-gray-600">
+                        {post.createdAt?.toDate
+                          ? post.createdAt.toDate().toLocaleString()
+                          : "Just now"}
+                      </p>
+                    </div>
+                    <span
+                      className={`text-xs p-1 border rounded-sm ${
+                        post.status === "Stray"
+                          ? "bg-red-100 text-red-700 border-red-300"
+                          : post.status === "Lost Pet"
+                          ? "bg-yellow-100 text-yellow-700 border-yellow-300"
+                          : "bg-gray-100 text-gray-700 border-gray-300"
+                      }`}
+                    >
+                      {post.status}
+                    </span>
                   </div>
-                  <span
-                    className={`text-xs p-1 border rounded-sm ${
-                      post.status === "Stray"
-                        ? "bg-red-100 text-red-700 border-red-300"
-                        : post.status === "Lost Pet"
-                        ? "bg-yellow-100 text-yellow-700 border-yellow-300"
-                        : "bg-gray-100 text-gray-700 border-gray-300"
-                    }`}
-                  >
-                    {post.status}
+                </div>
+
+                {/* Description */}
+                <p>{post.description}</p>
+
+                {/* Dog characteristics */}
+                <div className="flex py-1 gap-3">
+                  <span className="text-xs p-1 border bg-green-100 text-green-700 border-green-300 rounded-sm">
+                    {post.color}
                   </span>
+
+                  {post.breed && (
+                    <span className="text-xs p-1 border bg-green-100 text-green-700 border-green-300  rounded-sm">
+                      {post.breed}
+                    </span>
+                  )}
+                </div>
+
+                {/* Photo */}
+                <div className="flex justify-center p-3">
+                  <img
+                    src={post.photoURL}
+                    alt="Posted"
+                    className="w-100 rounded-sm"
+                  />
+                </div>
+
+                {/* Location */}
+                <div className="py-1 italic text-gray-400 text-sm">
+                  {post.address
+                    ? post.address
+                    : post.location
+                    ? `Latitude: ${post.location.lat.toFixed(
+                        5
+                      )}, Longitude: ${post.location.lng.toFixed(5)}`
+                    : "Location not available"}
                 </div>
               </div>
 
-              {/* Description */}
-              <p>{post.description}</p>
-
-              {/* Dog characteristics */}
-              <div className="flex py-1 gap-3">
-                <span className="text-xs p-1 border bg-green-100 text-green-700 border-green-300 rounded-sm">
-                  {post.color}
-                </span>
-
-                {post.breed && (
-                  <span className="text-xs p-1 border bg-green-100 text-green-700 border-green-300  rounded-sm">
-                    {post.breed}
-                  </span>
-                )}
-              </div>
-
-              {/* Photo */}
-              <div className="flex justify-center p-3">
-                <img
-                  src={post.photoURL}
-                  alt="Posted"
-                  className="w-100 rounded-sm"
-                />
-              </div>
-
-              {/* Location */}
-              <div className="py-1 italic text-gray-400 text-sm">
-                {post.address
-                  ? post.address
-                  : post.location
-                  ? `Latitude: ${post.location.lat.toFixed(
-                      5
-                    )}, Longitude: ${post.location.lng.toFixed(5)}`
-                  : "Location not available"}
+              <div className="flex flex-1 justify-between xl:justify-around px-2 pt-3 text-sm text-gray-500 font-medium">
+                <div className="flex items-center gap-2">
+                  <i className="bi bi-hand-thumbs-up"></i>
+                  <p>Like</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <i className="bi bi-chat"></i>
+                  <p>Comment</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <i className="bi bi-arrow-90deg-right"></i>
+                  <p>Repost</p>
+                </div>
               </div>
             </div>
-
-            <div className="flex flex-1 justify-between xl:justify-around px-2 pt-3 text-sm text-gray-500 font-medium">
-              <div className="flex items-center gap-2">
-                <i class="bi bi-hand-thumbs-up"></i>
-                <p>Like</p>
-              </div>
-              <div className="flex items-center gap-2">
-                <i class="bi bi-chat"></i>
-                <p>Comment</p>
-              </div>
-              <div className="flex items-center gap-2">
-                <i class="bi bi-arrow-90deg-right"></i>
-                <p>Repost</p>
-              </div>
-            </div>
-          </div>
-        ))
+          );
+        })
       )}
     </div>
   );
