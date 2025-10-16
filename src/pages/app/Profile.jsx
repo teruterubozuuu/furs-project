@@ -20,24 +20,46 @@ import { useNavigate, useParams } from "react-router-dom"; // <-- Added useParam
 
 // --- Post Card Component (Placeholder - Customize this to match your real post design) ---
 const PostCard = ({ post }) => (
-  <div className="border border-gray-200 p-4 rounded-lg shadow-sm bg-white">
-    <div className="flex justify-between items-start mb-2">
+  <div className="border border-gray-200 p-4 rounded-lg shadow-sm bg-white space-y-3">
+    {/* Post Header and Type */}
+    <div className="flex justify-between items-start">
       <p className="text-xs text-gray-500 font-medium">
         Type:{" "}
         <span className="font-semibold text-green-700">{post.postType}</span>
       </p>
-      {/* Optional: Display timestamp */}
-      {post.timestamp && (
+      {/* Display Creation Date */}
+      {post.createdAt && (
         <p className="text-xs text-gray-400">
-          {new Date(post.timestamp.toDate()).toLocaleDateString()}
+          {post.createdAt.toDate().toLocaleDateString()}
         </p>
       )}
     </div>
 
-    {/* Assuming your posts have a 'content' field */}
-    <p className="text-gray-700 mt-1 line-clamp-3">
-      {post.content || "Post content preview..."}
-    </p>
+    {/* Post Image */}
+    {post.photoURL && (
+      <div className="flex justify-center p-2 bg-gray-50 rounded-lg">
+        <img
+          src={post.photoURL}
+          alt={`${post.type} photo`}
+          className="w-full h-auto max-h-96 object-contain rounded-sm"
+        />
+      </div>
+    )}
+
+    {/* Description / Content */}
+    <div className="border-t pt-3">
+      <p className="font-semibold text-sm mb-1">Description:</p>
+      <p className="text-gray-700 text-sm">
+        {post.description || "No detailed description available."}
+      </p>
+    </div>
+
+    {/* Optional: Location / Address */}
+    {post.address && (
+      <div className="text-xs text-gray-500 italic mt-2">
+        Location: {post.address}
+      </div>
+    )}
   </div>
 );
 // ----------------------------------------
