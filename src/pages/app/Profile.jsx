@@ -10,7 +10,6 @@ import {
   where,
   getDocs,
   orderBy,
-  // 🚨 NEW IMPORTS FOR RATING
   writeBatch,
   serverTimestamp,
 } from "firebase/firestore";
@@ -125,7 +124,6 @@ export default function Profile() {
   const [description, setDescription] = useState("Add a description...");
   const [isEditing, setIsEditing] = useState(false);
 
-  // 🚨 RATING STATES
   const [averageRating, setAverageRating] = useState(0);
   const [ratingCount, setRatingCount] = useState(0);
   const [isRatingSubmitted, setIsRatingSubmitted] = useState(false);
@@ -150,7 +148,6 @@ export default function Profile() {
           setCurrentProfilePhoto(data.profilePhoto || defaultImg);
           setDescription(data.description || "Add a description...");
 
-          // 🚨 SET RATING DATA
           const count = data.totalRatingCount || 0;
           const sum = data.totalRatingSum || 0;
           setRatingCount(count);
@@ -161,7 +158,6 @@ export default function Profile() {
           setDescription("No description available.");
         }
 
-        // 🚨 CHECK IF CURRENT USER HAS ALREADY RATED THIS TARGET USER
         if (user?.uid && !isOwner) {
           const ratingDocRef = doc(
             db,
@@ -181,7 +177,6 @@ export default function Profile() {
     fetchUserData();
   }, [targetUserId, user, isOwner]);
 
-  // 2. Fetch User Posts (Remains the same)
   useEffect(() => {
     const fetchUserPosts = async () => {
       if (!targetUserId) {
@@ -230,7 +225,6 @@ export default function Profile() {
     fetchUserPosts();
   }, [targetUserId]);
 
-  // 3. PROFILE PHOTO CHANGE HANDLER (Remains the same)
   const handlePhotoChange = (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -239,7 +233,6 @@ export default function Profile() {
     }
   };
 
-  // 4. PROFILE SAVE HANDLER (Remains the same)
   const handleSave = async () => {
     if (!user) return;
     setIsEditing(false);
@@ -269,7 +262,6 @@ export default function Profile() {
     }
   };
 
-  // 🚨 5. RATING SUBMISSION HANDLER
   const handleRateUser = async (rating) => {
     if (!user?.uid || isOwner || isRatingSubmitted) return;
 
@@ -310,7 +302,6 @@ export default function Profile() {
     }
   };
 
-  // Existing handleLogout function remains the same
   const handleLogout = () => {
     confirmAlert({
       title: "Confirm Logout",
@@ -318,13 +309,12 @@ export default function Profile() {
       buttons: [
         {
           label: "Yes",
-          // 🚨 FIX: Ensure asynchronous operation and proper scoping
+
           onClick: () => {
             signOut(auth)
               .then(() => {
                 console.log("Sign out successful.");
-                // The `Maps` function is defined outside this scope
-                // but is accessible here.
+
                 navigate("/login");
               })
               .catch((error) => {
