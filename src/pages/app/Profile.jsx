@@ -10,6 +10,9 @@ import {
   where,
   getDocs,
   orderBy,
+  // 🚨 NEW IMPORTS FOR RATING
+  writeBatch,
+  serverTimestamp,
 } from "firebase/firestore";
 
 import { useAuth } from "../../context/AuthContext";
@@ -20,44 +23,87 @@ import "react-confirm-alert/src/react-confirm-alert.css";
 import { signOut } from "firebase/auth";
 import { useNavigate, useParams } from "react-router-dom";
 
-// --- Post Card Component (Assuming this is defined locally or imported) ---
-// Note: If you have this in a separate file, remove this block.
+// --- Star Icon Helper Component ---
+const StarRatingDisplay = ({ rating, count }) => {
+  // Round rating to the nearest half for display
+  const roundedRating = Math.round(rating * 2) / 2;
+  const fullStars = Math.floor(roundedRating);
+  const hasHalfStar = roundedRating % 1 !== 0;
+  const emptyStars = 5 - Math.ceil(roundedRating);
+
+  const stars = [];
+
+  // Full stars
+  for (let i = 0; i < fullStars; i++) {
+    stars.push(
+      <i key={`full-${i}`} className="bi bi-star-fill text-yellow-500"></i>
+    );
+  }
+  // Half star
+  if (hasHalfStar) {
+    stars.push(<i key="half" className="bi bi-star-half text-yellow-500"></i>);
+  }
+  // Empty stars
+  for (let i = 0; i < emptyStars; i++) {
+    stars.push(<i key={`empty-${i}`} className="bi bi-star text-gray-300"></i>);
+  }
+
+  return (
+    <div className="flex items-center space-x-1 text-sm">
+      {stars}
+      <span className="ml-2 text-xs text-gray-500">
+        ({rating.toFixed(1)} / {count} ratings)
+      </span>
+    </div>
+  );
+};
+
+// --- Post Card Component (Assuming defined locally) ---
 const PostCard = ({ post }) => (
   <div className="border border-gray-200 p-4 rounded-lg shadow-sm bg-white space-y-3">
+       {" "}
     <div className="flex justify-between items-start">
+           {" "}
       <p className="text-xs text-gray-500 font-medium">
-        Type:{" "}
-        <span className="font-semibold text-green-700">{post.postType}</span>
+                Type:        {" "}
+        <span className="font-semibold text-green-700">{post.postType}</span>   
+         {" "}
       </p>
+           {" "}
       {post.createdAt && (
         <p className="text-xs text-gray-400">
-          {post.createdAt.toDate().toLocaleDateString()}
+                    {post.createdAt.toDate().toLocaleDateString()}       {" "}
         </p>
       )}
+         {" "}
     </div>
-
+       {" "}
     {post.photoURL && (
       <div className="flex justify-center p-2 bg-gray-50 rounded-lg">
+               {" "}
         <img
           src={post.photoURL}
           alt={`${post.type} photo`}
           className="w-full h-auto max-h-96 object-contain rounded-sm"
         />
+             {" "}
       </div>
     )}
-
+       {" "}
     <div className="border-t pt-3">
-      <p className="font-semibold text-sm mb-1">Description:</p>
+            <p className="font-semibold text-sm mb-1">Description:</p>     {" "}
       <p className="text-gray-700 text-sm">
-        {post.description || "No detailed description available."}
+                {post.description || "No detailed description available."}     {" "}
       </p>
+         {" "}
     </div>
-
+       {" "}
     {post.address && (
       <div className="text-xs text-gray-500 italic mt-2">
-        Location: {post.address}
+                Location: {post.address}     {" "}
       </div>
     )}
+     {" "}
   </div>
 );
 // ------------------------------------------------------------------------
@@ -79,29 +125,53 @@ export default function Profile() {
   const [description, setDescription] = useState("Add a description...");
   const [isEditing, setIsEditing] = useState(false);
 
+  // 🚨 RATING STATES
+  const [averageRating, setAverageRating] = useState(0);
+  const [ratingCount, setRatingCount] = useState(0);
+  const [isRatingSubmitted, setIsRatingSubmitted] = useState(false);
+  // ------------------------
+
   const [userPosts, setUserPosts] = useState([]);
   const [loadingPosts, setLoadingPosts] = useState(true);
   const navigate = useNavigate();
-  // ------------------------
 
-  // 1. Fetch User Data (Updated to include profilePhoto and description)
+  // 1. Fetch User Data (Includes Rating Data Check)
   useEffect(() => {
     const fetchUserData = async () => {
       if (!targetUserId) return;
 
       try {
         const userDoc = await getDoc(doc(db, "users", targetUserId));
+
         if (userDoc.exists()) {
           const data = userDoc.data();
           setUsername(data.username);
           setRole(data.userType);
-
           setCurrentProfilePhoto(data.profilePhoto || defaultImg);
           setDescription(data.description || "Add a description...");
+
+          // 🚨 SET RATING DATA
+          const count = data.totalRatingCount || 0;
+          const sum = data.totalRatingSum || 0;
+          setRatingCount(count);
+          setAverageRating(count > 0 ? sum / count : 0);
         } else {
           setUsername(user?.displayName || "Unknown User");
           setRole("Community Volunteer");
           setDescription("No description available.");
+        }
+
+        // 🚨 CHECK IF CURRENT USER HAS ALREADY RATED THIS TARGET USER
+        if (user?.uid && !isOwner) {
+          const ratingDocRef = doc(
+            db,
+            "users",
+            targetUserId,
+            "ratings",
+            user.uid
+          );
+          const ratingSnapshot = await getDoc(ratingDocRef);
+          setIsRatingSubmitted(ratingSnapshot.exists());
         }
       } catch (error) {
         console.error("Error fetching user data: ", error);
@@ -109,9 +179,9 @@ export default function Profile() {
     };
 
     fetchUserData();
-  }, [targetUserId, user]);
+  }, [targetUserId, user, isOwner]);
 
-  // 2. Fetch User Posts (Remains the same - uses correct 'createdAt' ordering)
+  // 2. Fetch User Posts (Remains the same)
   useEffect(() => {
     const fetchUserPosts = async () => {
       if (!targetUserId) {
@@ -134,7 +204,6 @@ export default function Profile() {
             where("userId", "==", targetUserId),
             orderBy("createdAt", "desc")
           );
-
           const querySnapshot = await getDocs(postsQuery);
 
           querySnapshot.forEach((doc) => {
@@ -150,10 +219,8 @@ export default function Profile() {
             });
           });
         }
-
         setUserPosts(allPosts);
       } catch (error) {
-        // This will catch the Firebase Index error if it wasn't created
         console.error("Error fetching user posts:", error);
       } finally {
         setLoadingPosts(false);
@@ -163,47 +230,83 @@ export default function Profile() {
     fetchUserPosts();
   }, [targetUserId]);
 
-  // 3. PROFILE PHOTO CHANGE HANDLER
+  // 3. PROFILE PHOTO CHANGE HANDLER (Remains the same)
   const handlePhotoChange = (e) => {
     const file = e.target.files[0];
     if (file) {
       setFileToUpload(file);
-      // Display the temporary image URL immediately
       setCurrentProfilePhoto(URL.createObjectURL(file));
     }
   };
 
-  // 4. PROFILE SAVE HANDLER
+  // 4. PROFILE SAVE HANDLER (Remains the same)
   const handleSave = async () => {
     if (!user) return;
-    setIsEditing(false); // Exit edit mode immediately
+    setIsEditing(false);
 
     try {
       let photoURL = currentProfilePhoto;
 
-      // A. Handle Photo Upload (only if a new file was selected)
       if (fileToUpload) {
         const storageRef = ref(storage, `users/${user.uid}/profile.jpg`);
         const snapshot = await uploadBytes(storageRef, fileToUpload);
         photoURL = await getDownloadURL(snapshot.ref);
-
         setFileToUpload(null);
       }
 
-      // B. Save all profile data to Firestore
       const userRef = doc(db, "users", user.uid);
       await updateDoc(userRef, {
         profilePhoto: photoURL,
         description: description,
       });
 
-      // Update UI state with the final URL
       setCurrentProfilePhoto(photoURL);
       alert("Profile updated successfully!");
     } catch (error) {
       console.error("Error updating profile:", error);
       alert("Failed to update profile. Please try again.");
       setIsEditing(true);
+    }
+  };
+
+  // 🚨 5. RATING SUBMISSION HANDLER
+  const handleRateUser = async (rating) => {
+    if (!user?.uid || isOwner || isRatingSubmitted) return;
+
+    // Use the logged-in user's UID as the rating document ID
+    const ratingDocId = user.uid;
+    const targetUserRef = doc(db, "users", targetUserId);
+    const ratingDocRef = doc(targetUserRef, "ratings", ratingDocId);
+
+    try {
+      const batch = writeBatch(db);
+
+      // 1. Set document in the ratings sub-collection (to track individual votes)
+      batch.set(ratingDocRef, {
+        raterId: user.uid,
+        rating: rating,
+        createdAt: serverTimestamp(),
+      });
+
+      // 2. Update the main user document metadata (Atomic Update)
+      batch.update(targetUserRef, {
+        totalRatingSum: averageRating * ratingCount + rating,
+        totalRatingCount: ratingCount + 1,
+      });
+
+      await batch.commit();
+
+      // 3. Update local UI states
+      const newCount = ratingCount + 1;
+      const newSum = averageRating * ratingCount + rating;
+
+      setRatingCount(newCount);
+      setAverageRating(newSum / newCount);
+      setIsRatingSubmitted(true);
+      alert(`You rated ${username} ${rating} stars!`);
+    } catch (error) {
+      console.error("Error submitting rating:", error);
+      alert("Failed to submit rating. Please try again.");
     }
   };
 
@@ -215,10 +318,13 @@ export default function Profile() {
       buttons: [
         {
           label: "Yes",
+          // 🚨 FIX: Ensure asynchronous operation and proper scoping
           onClick: () => {
             signOut(auth)
               .then(() => {
                 console.log("Sign out successful.");
+                // The `Maps` function is defined outside this scope
+                // but is accessible here.
                 navigate("/login");
               })
               .catch((error) => {
@@ -251,7 +357,6 @@ export default function Profile() {
                 alt="User profile"
                 className="w-24 h-24 rounded-full object-cover mt-4 mb-2 relative"
               />
-              {/* Show 'Change' overlay only if the owner is editing */}
               {isOwner && isEditing && (
                 <label
                   htmlFor="fileInput"
@@ -276,6 +381,11 @@ export default function Profile() {
             </h2>
             <h3 className="text-sm text-gray-500">{role || "Loading..."}</h3>
 
+            {/* 🚨 RATING DISPLAY */}
+            {(ratingCount > 0 || !isOwner) && (
+              <StarRatingDisplay rating={averageRating} count={ratingCount} />
+            )}
+
             {/* 3. Description Field (Editable for Owner) */}
             {isOwner && isEditing ? (
               <textarea
@@ -287,6 +397,35 @@ export default function Profile() {
               />
             ) : (
               <p className="text-gray-500 text-sm">{description}</p>
+            )}
+
+            {/* 🚨 RATING INPUT (Visible only if NOT owner, NOT rated, and Logged In) */}
+            {!isOwner && !isRatingSubmitted && user?.uid && (
+              <div className="mt-4 p-3 border rounded-lg bg-white shadow-sm">
+                <p className="text-sm font-semibold mb-2 text-gray-700">
+                  Rate this user:
+                </p>
+                <div className="flex justify-center space-x-2">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <button
+                      key={star}
+                      onClick={() => handleRateUser(star)}
+                      className="text-2xl text-yellow-500 hover:scale-110 transition duration-100 ease-in-out focus:outline-none"
+                      aria-label={`Rate ${star} stars`}
+                    >
+                      <i className="bi bi-star-fill"></i>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Display confirmation if rated */}
+            {!isOwner && isRatingSubmitted && (
+              <p className="mt-4 text-sm text-green-600 font-medium">
+                <i className="bi bi-check-circle-fill mr-1"></i>
+                Thank you for your rating!
+              </p>
             )}
 
             {/* 4. Action Buttons (Edit, Save, Logout) */}
