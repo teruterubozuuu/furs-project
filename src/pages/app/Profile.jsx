@@ -1,33 +1,34 @@
 import React, { useEffect, useState } from "react";
+// Ensure you have all necessary Firestore/Storage imports
 import { storage, db, auth } from "../../firebase/config";
 import {
   doc,
   getDoc,
+  updateDoc,
   collection,
   query,
   where,
   getDocs,
   orderBy,
-  updateDoc, // <-- Included updateDoc for handleSave, assuming it was needed
 } from "firebase/firestore";
+
 import { useAuth } from "../../context/AuthContext";
 import defaultImg from "../../assets/default_img.jpg";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { confirmAlert } from "react-confirm-alert";
 import "react-confirm-alert/src/react-confirm-alert.css";
 import { signOut } from "firebase/auth";
-import { useNavigate, useParams } from "react-router-dom"; // <-- Added useParams
+import { useNavigate, useParams } from "react-router-dom";
 
-// --- Post Card Component (Placeholder - Customize this to match your real post design) ---
+// --- Post Card Component (Assuming this is defined locally or imported) ---
+// Note: If you have this in a separate file, remove this block.
 const PostCard = ({ post }) => (
   <div className="border border-gray-200 p-4 rounded-lg shadow-sm bg-white space-y-3">
-    {/* Post Header and Type */}
     <div className="flex justify-between items-start">
       <p className="text-xs text-gray-500 font-medium">
         Type:{" "}
         <span className="font-semibold text-green-700">{post.postType}</span>
       </p>
-      {/* Display Creation Date */}
       {post.createdAt && (
         <p className="text-xs text-gray-400">
           {post.createdAt.toDate().toLocaleDateString()}
@@ -35,7 +36,6 @@ const PostCard = ({ post }) => (
       )}
     </div>
 
-    {/* Post Image */}
     {post.photoURL && (
       <div className="flex justify-center p-2 bg-gray-50 rounded-lg">
         <img
@@ -46,7 +46,6 @@ const PostCard = ({ post }) => (
       </div>
     )}
 
-    {/* Description / Content */}
     <div className="border-t pt-3">
       <p className="font-semibold text-sm mb-1">Description:</p>
       <p className="text-gray-700 text-sm">
@@ -54,7 +53,6 @@ const PostCard = ({ post }) => (
       </p>
     </div>
 
-    {/* Optional: Location / Address */}
     {post.address && (
       <div className="text-xs text-gray-500 italic mt-2">
         Location: {post.address}
@@ -62,28 +60,31 @@ const PostCard = ({ post }) => (
     )}
   </div>
 );
-// ----------------------------------------
+// ------------------------------------------------------------------------
 
 export default function Profile() {
   const { user } = useAuth();
   const { userId: urlUserId } = useParams();
 
-  // Determine the target user's ID: URL param or logged-in user's ID
   const targetUserId = urlUserId || user?.uid;
-
-  // Check if the profile being viewed is the logged-in user's
   const isOwner = user?.uid === targetUserId;
 
   // --- State Management ---
   const [username, setUsername] = useState("");
   const [role, setRole] = useState("");
-  const [profilePhoto, setProfilePhoto] = useState(defaultImg);
+  const [currentProfilePhoto, setCurrentProfilePhoto] = useState(defaultImg);
+  const [fileToUpload, setFileToUpload] = useState(null);
+
+  // State for Description and Edit Mode
+  const [description, setDescription] = useState("Add a description...");
+  const [isEditing, setIsEditing] = useState(false);
+
   const [userPosts, setUserPosts] = useState([]);
   const [loadingPosts, setLoadingPosts] = useState(true);
   const navigate = useNavigate();
   // ------------------------
 
-  // 1. Fetch User Data based on targetUserId
+  // 1. Fetch User Data (Updated to include profilePhoto and description)
   useEffect(() => {
     const fetchUserData = async () => {
       if (!targetUserId) return;
@@ -94,10 +95,13 @@ export default function Profile() {
           const data = userDoc.data();
           setUsername(data.username);
           setRole(data.userType);
-          // Add logic to setProfilePhoto from data if available
+
+          setCurrentProfilePhoto(data.profilePhoto || defaultImg);
+          setDescription(data.description || "Add a description...");
         } else {
           setUsername(user?.displayName || "Unknown User");
           setRole("Community Volunteer");
+          setDescription("No description available.");
         }
       } catch (error) {
         console.error("Error fetching user data: ", error);
@@ -107,7 +111,7 @@ export default function Profile() {
     fetchUserData();
   }, [targetUserId, user]);
 
-  // 2. Fetch User Posts from both collections
+  // 2. Fetch User Posts (Remains the same - uses correct 'createdAt' ordering)
   useEffect(() => {
     const fetchUserPosts = async () => {
       if (!targetUserId) {
@@ -125,7 +129,6 @@ export default function Profile() {
 
       try {
         for (const collectionName of postCollections) {
-          // Query: filter by userId and order by timestamp
           const postsQuery = query(
             collection(db, collectionName),
             where("userId", "==", targetUserId),
@@ -141,13 +144,16 @@ export default function Profile() {
               postType:
                 collectionName === "stray_animal_posts"
                   ? "Stray Animal Report"
-                  : "Lost Pet Report",
+                  : collectionName === "lost_pet_posts"
+                  ? "Lost Pet Report"
+                  : "Unknown Status",
             });
           });
         }
 
         setUserPosts(allPosts);
       } catch (error) {
+        // This will catch the Firebase Index error if it wasn't created
         console.error("Error fetching user posts:", error);
       } finally {
         setLoadingPosts(false);
@@ -157,39 +163,51 @@ export default function Profile() {
     fetchUserPosts();
   }, [targetUserId]);
 
-  // --- Existing Handlers ---
+  // 3. PROFILE PHOTO CHANGE HANDLER
   const handlePhotoChange = (e) => {
     const file = e.target.files[0];
     if (file) {
-      const imageUrl = URL.createObjectURL(file);
-      setProfilePhoto(imageUrl);
+      setFileToUpload(file);
+      // Display the temporary image URL immediately
+      setCurrentProfilePhoto(URL.createObjectURL(file));
     }
   };
 
+  // 4. PROFILE SAVE HANDLER
   const handleSave = async () => {
-    // You'll need to update this to upload the file object itself, not the URL
-    // If profilePhoto is a File object, this should work.
-    if (!user || !profilePhoto) return;
+    if (!user) return;
+    setIsEditing(false); // Exit edit mode immediately
 
     try {
-      const storageRef = ref(storage, `users/${user.uid}/profile.jpg`);
-      // Assuming profilePhoto holds the file object after handlePhotoChange
-      const snapshot = await uploadBytes(storageRef, profilePhoto);
-      const downloadURL = await getDownloadURL(snapshot.ref);
+      let photoURL = currentProfilePhoto;
 
+      // A. Handle Photo Upload (only if a new file was selected)
+      if (fileToUpload) {
+        const storageRef = ref(storage, `users/${user.uid}/profile.jpg`);
+        const snapshot = await uploadBytes(storageRef, fileToUpload);
+        photoURL = await getDownloadURL(snapshot.ref);
+
+        setFileToUpload(null);
+      }
+
+      // B. Save all profile data to Firestore
       const userRef = doc(db, "users", user.uid);
       await updateDoc(userRef, {
-        profilePhoto: downloadURL,
+        profilePhoto: photoURL,
+        description: description,
       });
 
-      setProfilePhoto(downloadURL);
-      alert("Profile photo updated successfully!");
+      // Update UI state with the final URL
+      setCurrentProfilePhoto(photoURL);
+      alert("Profile updated successfully!");
     } catch (error) {
-      console.error("Error uploading photo:", error);
-      alert("Failed to upload photo. Please try again.");
+      console.error("Error updating profile:", error);
+      alert("Failed to update profile. Please try again.");
+      setIsEditing(true);
     }
   };
 
+  // Existing handleLogout function remains the same
   const handleLogout = () => {
     confirmAlert({
       title: "Confirm Logout",
@@ -217,8 +235,7 @@ export default function Profile() {
     });
   };
 
-  // ---------------------------------------------------
-
+  // --- JSX RETURN ---
   return (
     <div className="max-w-[600px] mx-auto h-auto space-y-8">
       <div className="border border-gray-200 shadow-sm flex flex-wrap sm:flex-nowrap items-center gap-3 p-4 rounded-sm overflow-hidden bg-[#fafafa]">
@@ -227,14 +244,15 @@ export default function Profile() {
             {isOwner ? "Your Profile" : `${username}'s Profile`}
           </h1>
           <div className="flex justify-center items-center flex-col space-y-2">
+            {/* 1. Profile Picture and Change Overlay */}
             <div className="relative group w-24 h-24 flex justify-center items-center m-2">
               <img
-                src={profilePhoto}
+                src={currentProfilePhoto}
                 alt="User profile"
                 className="w-24 h-24 rounded-full object-cover mt-4 mb-2 relative"
               />
-              {/* Show 'Change' overlay only for the owner */}
-              {isOwner && (
+              {/* Show 'Change' overlay only if the owner is editing */}
+              {isOwner && isEditing && (
                 <label
                   htmlFor="fileInput"
                   className="absolute inset-x-0 inset-y-1 flex items-center w-24 h-24 rounded-full bg-black/50 justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
@@ -248,25 +266,64 @@ export default function Profile() {
                 accept="image/*"
                 onChange={handlePhotoChange}
                 className="hidden"
+                disabled={!isEditing}
               />
             </div>
+
+            {/* 2. Username and Role */}
             <h2 className="text-base font-semibold">
               {username || "Loading..."}
             </h2>
             <h3 className="text-sm text-gray-500">{role || "Loading..."}</h3>
-            <p className="text-gray-500 text-sm">Add a description...</p>
 
-            {isOwner && (
-              <button
-                type="button"
-                onClick={handleLogout}
-                aria-label="Logout"
-                className="flex gap-2 items-center text-xl text-[#fafafa] bg-[rgb(40,112,56)] px-3 py-1 hover:bg-[rgb(43,81,51)] rounded-full duration-200 ease-in cursor-pointer"
-              >
-                <i className="bi bi-box-arrow-right"></i>
-                <span className="hidden xl:block text-xs mt-1">Logout</span>
-              </button>
+            {/* 3. Description Field (Editable for Owner) */}
+            {isOwner && isEditing ? (
+              <textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                rows="3"
+                maxLength="150"
+                className="w-full max-w-xs text-sm text-gray-700 p-2 border rounded-md resize-none"
+              />
+            ) : (
+              <p className="text-gray-500 text-sm">{description}</p>
             )}
+
+            {/* 4. Action Buttons (Edit, Save, Logout) */}
+            <div className="flex justify-center gap-3 mt-4">
+              {isOwner && !isEditing && (
+                <button
+                  type="button"
+                  onClick={() => setIsEditing(true)}
+                  className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition duration-200"
+                >
+                  Edit Profile
+                </button>
+              )}
+
+              {isOwner && isEditing && (
+                <button
+                  type="button"
+                  onClick={handleSave}
+                  className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition duration-200"
+                >
+                  Save Changes
+                </button>
+              )}
+
+              {/* Logout button remains outside the edit logic */}
+              {isOwner && (
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  aria-label="Logout"
+                  className="flex gap-2 items-center text-xl text-[#fafafa] bg-[rgb(40,112,56)] px-3 py-1 hover:bg-[rgb(43,81,51)] rounded-full duration-200 ease-in cursor-pointer"
+                >
+                  <i className="bi bi-box-arrow-right"></i>
+                  <span className="hidden xl:block text-xs mt-1">Logout</span>
+                </button>
+              )}
+            </div>
           </div>
         </main>
       </div>

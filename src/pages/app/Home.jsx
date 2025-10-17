@@ -1,21 +1,26 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
+// CORRECT IMPORT 1: Import the initialized database instance
 import { db } from "../../firebase/config";
 
-// 🚨 CORRECT IMPORT 2: Import the specific Firestore methods from the Firebase SDK.
+// 🚨 CORRECT IMPORT 2: Import all necessary functions directly from the Firebase SDK.
 import {
   collection,
   getDocs,
   query,
   orderBy,
   doc,
+  getDoc,
   deleteDoc,
   updateDoc,
+  // 🚨 FIX: These specialized methods must be imported from the SDK
+  arrayUnion,
+  arrayRemove,
 } from "firebase/firestore";
 
 import AddPost from "./components/AddPost";
-import EditPostModal from "./components/EditPostModal"; // 🚨 NEW: Import the Edit Modal
+import EditPostModal from "./components/EditPostModal";
 import defaultImg from "../../assets/default_img.jpg";
 import { OrbitProgress } from "react-loading-indicators";
 import Filter from "./components/Filter";
@@ -35,13 +40,45 @@ export default function Home() {
   const [posts, setPosts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // 🚨 NEW STATES FOR EDITING
   const [isEditing, setIsEditing] = useState(false);
   const [postToEdit, setPostToEdit] = useState(null);
-  // ----------------------------
+
+  // 🚨 NEW STATE: To hold the logged-in user's current profile data
+  const [currentUserProfile, setCurrentUserProfile] = useState({
+    photoURL: defaultImg,
+    username: user?.displayName || "Guest",
+  });
 
   // ------------------------------------------
-  // 🚨 EDIT FUNCTIONALITY
+  // 🚨 1. FETCH CURRENT USER PROFILE DATA
+  // This runs once to load the latest photo/username.
+  // ------------------------------------------
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      if (!user?.uid) return;
+
+      try {
+        // Fetch user document from the 'users' collection
+        const userDoc = await getDoc(doc(db, "users", user.uid));
+        if (userDoc.exists()) {
+          const data = userDoc.data();
+          setCurrentUserProfile({
+            // Prioritize profilePhoto from Firestore, fall back to default
+            photoURL: data.profilePhoto || defaultImg,
+            // Prioritize username from Firestore, fall back to Auth display name
+            username: data.username || user.displayName,
+          });
+        }
+      } catch (error) {
+        console.error("Error fetching current user profile:", error);
+      }
+    };
+
+    fetchUserProfile();
+  }, [user]); // Reruns when the user object initializes
+
+  // ------------------------------------------
+  // 2. EDIT/UPDATE FUNCTIONALITY
   // ------------------------------------------
   const handleEditPost = (post) => {
     setPostToEdit(post);
@@ -56,11 +93,10 @@ export default function Home() {
     }
 
     try {
-      // 1. Update document in Firestore
       const postRef = doc(db, collectionName, postId);
       await updateDoc(postRef, updatedData);
 
-      // 2. Update the local state (UI) immediately
+      // Update the local state (UI) immediately
       setPosts((prevPosts) =>
         prevPosts.map((post) =>
           post.id === postId ? { ...post, ...updatedData } : post
@@ -72,10 +108,9 @@ export default function Home() {
       alert("Failed to update post. Please try again.");
     }
   };
-  // ------------------------------------------
 
   // ------------------------------------------
-  // DELETE FUNCTIONALITY (from previous step)
+  // 3. DELETE FUNCTIONALITY
   // ------------------------------------------
   const handleDeletePost = async (postId, postType) => {
     if (!window.confirm("Are you sure you want to delete this post?")) {
@@ -104,13 +139,12 @@ export default function Home() {
   };
 
   // ------------------------------------------
-  // FETCH POSTS (remains the same)
+  // 4. FETCH ALL POSTS (FEED CONTENT)
   // ------------------------------------------
   useEffect(() => {
     const fetchAllPosts = async () => {
       setIsLoading(true);
       try {
-        // NOTE: Including 'unknown_status' collection
         const strayRef = collection(db, "stray_animal_posts");
         const lostRef = collection(db, "lost_pet_posts");
         const unknownRef = collection(db, "unknown_status");
@@ -139,7 +173,6 @@ export default function Home() {
           type: "Unknown",
         }));
 
-        // The reverse geocoding and sorting logic remains here...
         const combined = [...strayPosts, ...lostPosts, ...unknownPosts].sort(
           (a, b) => {
             const aDate = a.createdAt?.toDate?.() || new Date(0);
@@ -148,6 +181,7 @@ export default function Home() {
           }
         );
 
+        // Perform reverse geocoding
         const updatedPosts = await Promise.all(
           combined.map(async (post) => {
             if (post.location?.lat && post.location?.lng) {
@@ -179,20 +213,19 @@ export default function Home() {
 
   return (
     <div className="max-w-[700px] space-y-4">
-      {/* 🚨 NEW: Edit Post Modal Integration */}
       <EditPostModal
         isOpen={isEditing}
         onClose={() => setIsEditing(false)}
         post={postToEdit}
         onUpdate={handleUpdatePost}
       />
-      {/* ------------------------------------- */}
 
-      {/* ... (Create Post and Filter Sections remain the same) ... */}
+      {/* Create Post and Filter Sections */}
       <div className=" flex justify-between items-stretch gap-2">
         <div className="flex-1 w-[700px] flex flex-wrap sm:flex-nowrap items-center gap-3 p-4 rounded-sm border border-gray-200 shadow-sm bg-[#fafafa]">
           <img
-            src={defaultImg}
+            // 🚨 UPDATED: Use the fetched profile photo URL
+            src={currentUserProfile.photoURL}
             alt="User profile picture"
             className="w-8 h-8 rounded-full object-cover flex-shrink-0"
           />
@@ -243,11 +276,11 @@ export default function Home() {
               <div className="border-b border-gray-200">
                 <div className="flex justify-between items-start pb-2">
                   <div className="flex h-full items-center">
-                    {/* Avatar/Image is here */}
+                    {/* 🚨 FIX: Post Avatar */}
                     <img
-                      src={defaultImg}
+                      src={isOwner ? currentUserProfile.photoURL : defaultImg}
                       alt="Profile"
-                      className="w-15 h-15 rounded-full"
+                      className="w-15 h-15 rounded-full object-cover"
                     />
 
                     <div className="pl-2 space-y-1">
@@ -256,7 +289,10 @@ export default function Home() {
                           to={profilePath}
                           className="text-base font-semibold hover:underline cursor-pointer"
                         >
-                          {post.username}
+                          {/* 🚨 FIX: Post Username */}
+                          {isOwner
+                            ? currentUserProfile.username
+                            : post.username}
                         </Link>
                         <p className="text-[11px] text-gray-600">
                           {post.createdAt?.toDate
@@ -278,11 +314,11 @@ export default function Home() {
                     </div>
                   </div>
 
-                  {/* 🚨 UPDATED: Edit/Delete Buttons */}
+                  {/* Edit/Delete Buttons */}
                   {isOwner && (
                     <div className="flex gap-2">
                       <button
-                        onClick={() => handleEditPost(post)} // 🚨 Calls new handler
+                        onClick={() => handleEditPost(post)}
                         className="text-xs text-blue-600 hover:text-blue-800 transition duration-150 ease-in-out"
                       >
                         <i className="bi bi-pencil-square"></i> Edit
@@ -295,7 +331,6 @@ export default function Home() {
                       </button>
                     </div>
                   )}
-                  {/* ---------------------------------------------------- */}
                 </div>
 
                 {/* Description */}
