@@ -1,23 +1,111 @@
 import React, { useEffect, useState } from "react";
-// 🚨 NEW IMPORTS
 import { Link } from "react-router-dom";
-import { useAuth } from "../../context/AuthContext"; // Assuming the path to your AuthContext is correct
-// ----------------
+import { useAuth } from "../../context/AuthContext";
+import { db } from "../../firebase/config";
+
+// 🚨 CORRECT IMPORT 2: Import the specific Firestore methods from the Firebase SDK.
+import {
+  collection,
+  getDocs,
+  query,
+  orderBy,
+  doc,
+  deleteDoc,
+  updateDoc,
+} from "firebase/firestore";
 
 import AddPost from "./components/AddPost";
-import { db } from "../../firebase/config";
-import { collection, getDocs, query, orderBy } from "firebase/firestore";
+import EditPostModal from "./components/EditPostModal"; // 🚨 NEW: Import the Edit Modal
 import defaultImg from "../../assets/default_img.jpg";
 import { OrbitProgress } from "react-loading-indicators";
 import Filter from "./components/Filter";
 
+// Helper function to determine the Firestore collection name based on post type
+const getCollectionName = (postType) => {
+  if (postType === "Stray") return "stray_animal_posts";
+  if (postType === "Lost") return "lost_pet_posts";
+  if (postType === "Unknown") return "unknown_status";
+  return null;
+};
+
 export default function Home() {
-  const { user } = useAuth(); // 🚨 NEW: Get logged-in user
+  const { user } = useAuth();
   const [isOpenPost, setIsOpenPost] = useState(false);
   const [isOpenFilter, setIsOpenFilter] = useState(false);
   const [posts, setPosts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
+  // 🚨 NEW STATES FOR EDITING
+  const [isEditing, setIsEditing] = useState(false);
+  const [postToEdit, setPostToEdit] = useState(null);
+  // ----------------------------
+
+  // ------------------------------------------
+  // 🚨 EDIT FUNCTIONALITY
+  // ------------------------------------------
+  const handleEditPost = (post) => {
+    setPostToEdit(post);
+    setIsEditing(true);
+  };
+
+  const handleUpdatePost = async (postId, postType, updatedData) => {
+    const collectionName = getCollectionName(postType);
+    if (!collectionName) {
+      console.error("Unknown post type:", postType);
+      return;
+    }
+
+    try {
+      // 1. Update document in Firestore
+      const postRef = doc(db, collectionName, postId);
+      await updateDoc(postRef, updatedData);
+
+      // 2. Update the local state (UI) immediately
+      setPosts((prevPosts) =>
+        prevPosts.map((post) =>
+          post.id === postId ? { ...post, ...updatedData } : post
+        )
+      );
+      console.log(`Post ${postId} updated successfully in ${collectionName}.`);
+    } catch (error) {
+      console.error("Error updating post:", error);
+      alert("Failed to update post. Please try again.");
+    }
+  };
+  // ------------------------------------------
+
+  // ------------------------------------------
+  // DELETE FUNCTIONALITY (from previous step)
+  // ------------------------------------------
+  const handleDeletePost = async (postId, postType) => {
+    if (!window.confirm("Are you sure you want to delete this post?")) {
+      return;
+    }
+
+    const collectionName = getCollectionName(postType);
+    if (!collectionName) {
+      console.error("Unknown post type:", postType);
+      return;
+    }
+
+    try {
+      const postRef = doc(db, collectionName, postId);
+      await deleteDoc(postRef);
+
+      // Update the local state (UI)
+      setPosts((prevPosts) => prevPosts.filter((post) => post.id !== postId));
+      console.log(
+        `Post ${postId} deleted successfully from ${collectionName}.`
+      );
+    } catch (error) {
+      console.error("Error deleting post:", error);
+      alert("Failed to delete post. Please try again.");
+    }
+  };
+
+  // ------------------------------------------
+  // FETCH POSTS (remains the same)
+  // ------------------------------------------
   useEffect(() => {
     const fetchAllPosts = async () => {
       setIsLoading(true);
@@ -51,6 +139,7 @@ export default function Home() {
           type: "Unknown",
         }));
 
+        // The reverse geocoding and sorting logic remains here...
         const combined = [...strayPosts, ...lostPosts, ...unknownPosts].sort(
           (a, b) => {
             const aDate = a.createdAt?.toDate?.() || new Date(0);
@@ -59,7 +148,6 @@ export default function Home() {
           }
         );
 
-        // Perform reverse geocoding
         const updatedPosts = await Promise.all(
           combined.map(async (post) => {
             if (post.location?.lat && post.location?.lng) {
@@ -91,6 +179,16 @@ export default function Home() {
 
   return (
     <div className="max-w-[700px] space-y-4">
+      {/* 🚨 NEW: Edit Post Modal Integration */}
+      <EditPostModal
+        isOpen={isEditing}
+        onClose={() => setIsEditing(false)}
+        post={postToEdit}
+        onUpdate={handleUpdatePost}
+      />
+      {/* ------------------------------------- */}
+
+      {/* ... (Create Post and Filter Sections remain the same) ... */}
       <div className=" flex justify-between items-stretch gap-2">
         <div className="flex-1 w-[700px] flex flex-wrap sm:flex-nowrap items-center gap-3 p-4 rounded-sm border border-gray-200 shadow-sm bg-[#fafafa]">
           <img
@@ -131,9 +229,10 @@ export default function Home() {
         </div>
       ) : (
         posts.map((post) => {
-          // 🚨 NEW LOGIC: Determine the profile path
           const profilePath =
             post.userId === user?.uid ? "/profile" : `/profile/${post.userId}`;
+
+          const isOwner = user?.uid === post.userId;
 
           return (
             <div
@@ -142,42 +241,61 @@ export default function Home() {
             >
               {/* Post header */}
               <div className="border-b border-gray-200">
-                <div className="flex h-full items-center pb-2">
-                  {/* Avatar/Image is here */}
-                  <img
-                    src={defaultImg}
-                    alt="Profile"
-                    className="w-15 h-15 rounded-full"
-                  />
+                <div className="flex justify-between items-start pb-2">
+                  <div className="flex h-full items-center">
+                    {/* Avatar/Image is here */}
+                    <img
+                      src={defaultImg}
+                      alt="Profile"
+                      className="w-15 h-15 rounded-full"
+                    />
 
-                  <div className="pl-2 space-y-1">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      {/* 🚨 NEW: Make the username clickable */}
-                      <Link
-                        to={profilePath}
-                        className="text-base font-semibold hover:underline cursor-pointer"
+                    <div className="pl-2 space-y-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <Link
+                          to={profilePath}
+                          className="text-base font-semibold hover:underline cursor-pointer"
+                        >
+                          {post.username}
+                        </Link>
+                        <p className="text-[11px] text-gray-600">
+                          {post.createdAt?.toDate
+                            ? post.createdAt.toDate().toLocaleString()
+                            : "Just now"}
+                        </p>
+                      </div>
+                      <span
+                        className={`text-xs p-1 border rounded-sm ${
+                          post.status === "Stray"
+                            ? "bg-red-100 text-red-700 border-red-300"
+                            : post.status === "Lost Pet"
+                            ? "bg-yellow-100 text-yellow-700 border-yellow-300"
+                            : "bg-gray-100 text-gray-700 border-gray-300"
+                        }`}
                       >
-                        {post.username}
-                      </Link>
-                      {/* ---------------------------------- */}
-                      <p className="text-[11px] text-gray-600">
-                        {post.createdAt?.toDate
-                          ? post.createdAt.toDate().toLocaleString()
-                          : "Just now"}
-                      </p>
+                        {post.status}
+                      </span>
                     </div>
-                    <span
-                      className={`text-xs p-1 border rounded-sm ${
-                        post.status === "Stray"
-                          ? "bg-red-100 text-red-700 border-red-300"
-                          : post.status === "Lost Pet"
-                          ? "bg-yellow-100 text-yellow-700 border-yellow-300"
-                          : "bg-gray-100 text-gray-700 border-gray-300"
-                      }`}
-                    >
-                      {post.status}
-                    </span>
                   </div>
+
+                  {/* 🚨 UPDATED: Edit/Delete Buttons */}
+                  {isOwner && (
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleEditPost(post)} // 🚨 Calls new handler
+                        className="text-xs text-blue-600 hover:text-blue-800 transition duration-150 ease-in-out"
+                      >
+                        <i className="bi bi-pencil-square"></i> Edit
+                      </button>
+                      <button
+                        onClick={() => handleDeletePost(post.id, post.type)}
+                        className="text-xs text-red-600 hover:text-red-800 transition duration-150 ease-in-out"
+                      >
+                        <i className="bi bi-trash"></i> Delete
+                      </button>
+                    </div>
+                  )}
+                  {/* ---------------------------------------------------- */}
                 </div>
 
                 {/* Description */}
