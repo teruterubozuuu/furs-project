@@ -8,6 +8,7 @@ import {
   signInWithEmailAndPassword,
   signInWithPopup,
   GoogleAuthProvider,
+  signOut, 
 } from "firebase/auth";
 import { useState } from "react";
 
@@ -15,11 +16,14 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isChecked, setIsChecked] = useState(false);
+  const [loading,setLoading] = useState(false);
+  const [error,setError] = useState("");
   const navigate = useNavigate();
   const provider = new GoogleAuthProvider();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setLoading(true);
     try {
       await setPersistence(
         auth,
@@ -31,11 +35,20 @@ export default function LoginPage() {
         password
       );
       const user = userCredential.user;
+
+      if(!user.emailVerified){
+        await signOut(auth);
+        setError("Please verify your email before logging in.");
+        return;
+      }
+    
       console.log("Logged in successfully", user);
       navigate("/");
     } catch (error) {
       console.error("Error logging in:", error);
       alert("Login failed. Please check your credentials.");
+    } finally{
+      setLoading(false);
     }
   };
 
@@ -108,6 +121,8 @@ export default function LoginPage() {
                 Forgot password?
               </NavLink>
             </div>
+
+            {<p className="text-red-400 italic font-light text-center">{error}</p>}
 
             <button
               className="w-full p-2 rounded-[10px] cursor-pointer text-[#212121] font-semibold bg-[#fbc02d]"
