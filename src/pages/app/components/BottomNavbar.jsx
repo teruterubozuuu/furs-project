@@ -55,14 +55,6 @@ export default function BottomNavbar() {
 
         <AddPost isOpen = {isOpen} onClose={()=>setIsOpen(false)} />
 
-        <div className={userType === "Rescuer" ? "hidden" : "flex"}>
-          <NavLink
-            to="/adoption"
-          >
-            <i className="bi bi-search-heart text-[#fbc02d]  block text-center text-lg"></i>
-          </NavLink>
-        </div>
-
         <div>
           <NavLink
             to="/organizations"
@@ -71,9 +63,10 @@ export default function BottomNavbar() {
           </NavLink>
         </div>
 
+        {/*
         <div className="xl:hidden">
           <i className="bi bi-list text-[#fbc02d]  block text-center text-lg"></i>
-        </div>
+        </div>*/}
       </nav>
     </>
   );
