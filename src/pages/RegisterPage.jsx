@@ -11,11 +11,10 @@ export default function RegisterPage() {
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [loading,setLoding] = useState(false);
+  const [failedRegister, setFailedRegister] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setLoding(true);
     try {
       const userCredential = await createUserWithEmailAndPassword(
         auth,
@@ -47,8 +46,7 @@ export default function RegisterPage() {
       navigate("/login");
     } catch (error) {
       console.error("Error creating user:", error);
-    } finally{
-      setLoding(false);
+      setFailedRegister(true);
     }
   };
 
@@ -56,12 +54,13 @@ export default function RegisterPage() {
     <>
       <main className="h-screen bg-[url(/src/assets/app_bg2.png)] bg-cover bg-center flex xl:pt-20 pt-10 justify-center">
         <section>
-          <div className="md:w-[400px] border relative z-80 px-8 py-16 rounded-lg bg-[#ffffff]/90 border-gray-300 shadow-xl">
+          <div className="md:w-[400px] border relative z-80 px-8 py-16 rounded-lg bg-[#ffffff]/90 border-gray-200 shadow-lg">
             <h1 className="block text-center font-bold text-2xl mb-5 text-[#2e7d32]">
               Create an account
             </h1>
 
             <form className="space-y-5 text-gray-700" onSubmit={handleSubmit}>
+              {failedRegister ? <p className="text-red-white text-sm text-red-700 border border-red-300 w-full rounded-sm bg-red-100 p-2">Email is already in use.</p> : null}
               <div>
                 <label htmlFor="username">Username</label>
                 <br />
@@ -69,7 +68,7 @@ export default function RegisterPage() {
                   type="text"
                   name="username"
                   id="username"
-                  className="border-b border-gray-400 w-full p-1 focus:outline-none"
+                  className="border border-gray-200 rounded-sm w-full p-1 focus:outline-none"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   required
@@ -83,7 +82,7 @@ export default function RegisterPage() {
                   type="text"
                   name="email"
                   id="email"
-                  className="border-b border-gray-400 w-full p-1 focus:outline-none"
+                  className="border border-gray-200 rounded-sm w-full p-1 focus:outline-none"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
@@ -98,25 +97,30 @@ export default function RegisterPage() {
                 <input
                   type="password"
                   name="password"
-                  className="border-b border-gray-400 w-full p-1 focus:outline-none"
+                  className="border border-gray-200 rounded-sm w-full p-1 focus:outline-none"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
                 ></input>
               </div>
 
-               {loading && <p>Creating account...</p>}
-
-              <button className="text-[#212121]  bg-[#fbc02d] font-medium w-full p-2 rounded-sm cursor-pointer">
+              <button className="text-white  bg-[#2e7d32] font-medium w-full p-2 rounded-sm cursor-pointer">
                 Sign up
               </button>
 
-              <NavLink
-                to="/login"
-                className="text-sm block text-center cursor-pointer"
-              >
-                Already have an account? Login here
-              </NavLink>
+              <div className="text-sm block text-center cursor-pointer font-medium">
+                <span className="font-normal text-gray-500">
+                  Already have an account? {" "}
+                </span>{" "}
+                <span className="font-bold underline">
+                  <NavLink
+                    to="/login"
+                    className="hover:text-[#2e7d32] transition-all ease-in"
+                  >
+                    Login here
+                  </NavLink>
+                </span>
+              </div>
             </form>
           </div>
         </section>
