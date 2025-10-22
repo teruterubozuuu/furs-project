@@ -1,7 +1,7 @@
 import { NavLink } from "react-router-dom";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { createUserWithEmailAndPassword } from "firebase/auth";
+import { createUserWithEmailAndPassword, sendEmailVerification, signOut} from "firebase/auth";
 import { auth, db } from "../firebase/config";
 import { doc, setDoc } from "firebase/firestore";
 
@@ -11,9 +11,11 @@ export default function RegisterPage() {
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [loading,setLoding] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setLoding(true);
     try {
       const userCredential = await createUserWithEmailAndPassword(
         auth,
@@ -21,6 +23,9 @@ export default function RegisterPage() {
         password
       );
       const user = userCredential.user;
+
+      await sendEmailVerification(user);
+
 
       await setDoc(doc(db, "users", user.uid), {
         username: username,
@@ -36,10 +41,14 @@ export default function RegisterPage() {
         totalRatingCount: 0,
       });
 
-      console.log("Signed up successfully", userCredential.user);
+
+      await signOut(auth); 
+      console.log("User created and email verification sent:", user);
       navigate("/login");
     } catch (error) {
       console.error("Error creating user:", error);
+    } finally{
+      setLoding(false);
     }
   };
 
@@ -95,6 +104,8 @@ export default function RegisterPage() {
                   required
                 ></input>
               </div>
+
+               {loading && <p>Creating account...</p>}
 
               <button className="text-[#212121]  bg-[#fbc02d] font-medium w-full p-2 rounded-sm cursor-pointer">
                 Sign up
