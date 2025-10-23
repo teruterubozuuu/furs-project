@@ -212,7 +212,7 @@ export default function Home() {
   }, []);
 
   return (
-    <div className="max-w-[700px] space-y-4">
+    <div className="space-y-4">
       <EditPostModal
         isOpen={isEditing}
         onClose={() => setIsEditing(false)}
@@ -222,7 +222,8 @@ export default function Home() {
 
       {/* Create Post and Filter Sections */}
       <div className=" flex justify-between items-stretch gap-2">
-        <div className="flex-1 w-[700px] flex flex-wrap sm:flex-nowrap items-center gap-3 p-4 rounded-sm border border-gray-200 shadow-sm bg-[#fafafa]">
+        
+        <div className="flex-1 flex flex-wrap sm:flex-nowrap items-center gap-3 p-4 rounded-sm border border-gray-200 shadow-sm bg-[#fafafa]">
           <img
             // 🚨 UPDATED: Use the fetched profile photo URL
             src={currentUserProfile.photoURL}
