@@ -50,10 +50,6 @@ export default function LeftSideBar() {
     <div className="h-full hidden xl:flex xl:justify-center ">
       <div>
         <div className="text-sm border border-gray-200 shadow-sm p-7 rounded-sm space-y-2 text-center bg-[#fafafa]">
-          <h1 className="font-semibold text-[rgb(40,112,56)] text-lg">
-            {role || "Loading..."}
-          </h1>
-
           {/* 🚨 UPDATED: Use the fetched profile photo */}
           <div className="flex justify-center">
             <img
@@ -63,7 +59,10 @@ export default function LeftSideBar() {
             />
           </div>
 
-          <h2 className="font-semibold">{username || "Loading..."}</h2>
+          <h2 className="font-semibold text-lg">{username || "Loading..."}</h2>
+          <h1 className="font-medium text-[rgb(40,112,56)] text-medium">
+            {role || "Loading..."}
+          </h1>
           {/* 🚨 UPDATED: Use the fetched description */}
           <p className="text-gray-400 italic">{description}</p>
         </div>
