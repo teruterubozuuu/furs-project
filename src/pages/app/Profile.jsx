@@ -333,8 +333,8 @@ export default function Profile() {
 
   // --- JSX RETURN ---
   return (
-    <div className="max-w-[600px] mx-auto h-auto space-y-8">
-      <div className="border border-gray-200 shadow-sm flex flex-wrap sm:flex-nowrap items-center gap-3 p-4 rounded-sm overflow-hidden bg-[#fafafa]">
+    <div className=" h-auto space-y-8">
+      <div className="border border-gray-200 shadow-sm flex flex-wrap sm:flex-nowrap items-center gap-3 p-4 rounded-lg overflow-hidden bg-[#fafafa]">
         <main className="w-screen space-y-2 p-2">
           <h1 className="font-semibold text-xl text-center">
             {isOwner ? "Your Profile" : `${username}'s Profile`}

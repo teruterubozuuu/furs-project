@@ -12,51 +12,60 @@ export default function LeftSideBar() {
   const [username, setUsername] = useState("");
   const [role, setRole] = useState("");
   const [isOpen, setIsOpen] = useState(false);
-  const [profilePhoto, setProfilePhoto] = useState(defaultImg);
 
+  const [currentUserProfile, setCurrentUserProfile] = useState({
+    photoURL: defaultImg,
+    username: user?.displayName,
+    role: user?.userType
+  });
+
+  // ------------------------------------------
+  // 🚨 1. FETCH CURRENT USER PROFILE DATA
+  // This runs once to load the latest photo/username.
+  // ------------------------------------------
   useEffect(() => {
-    const fetchUserDetails = async () => {
-      if (!user) return;
+    const fetchUserProfile = async () => {
+      if (!user?.uid) return;
 
       try {
+        // Fetch user document from the 'users' collection
         const userDoc = await getDoc(doc(db, "users", user.uid));
-
         if (userDoc.exists()) {
           const data = userDoc.data();
-          setUsername(data.username || user.displayName);
+          setCurrentUserProfile({
+            // Prioritize profilePhoto from Firestore, fall back to default
+            photoURL: data.profilePhoto || defaultImg,
+            // Prioritize username from Firestore, fall back to Auth display name
+          });
+                      setUsername(data.username || user.displayName);
           setRole(data.userType || "");
-
-          setProfilePhoto(data.profilePhoto || defaultImg);
         } else {
-          setUsername(user.displayName || "Unnamed");
+           setUsername(user.displayName || "Unnamed");
           setRole("Community Volunteer");
-
-          setProfilePhoto(defaultImg);
         }
       } catch (error) {
         console.error("Error fetching user data:", error);
         setUsername(user.displayName || "Unnamed");
         setRole("");
-        setProfilePhoto(defaultImg);
       }
     };
 
-    fetchUserDetails();
-  }, [user]);
+    fetchUserProfile();
+  }, [user]); // Reruns when the user object initializes
 
   return (
     <div className="h-full  hidden xl:flex xl:flex-col xl:w-full ">
-      <div className="space-y-4">
-        <img src={logo} alt="Furs Logo" className="w-35 h-auto" />
+      <div className="space-y-2">
         <div className="text-sm border border-gray-200 shadow-sm  rounded-lg bg-[#fafafa]">
-          <div className="flex items-center p-7">
+          <div className="px-5 pt-5"> <img src={logo} alt="Furs Logo" className="w-50 h-auto" /></div>
+          <div className="flex items-center py-7 px-5">
             <img
-              src={profilePhoto}
+              src={currentUserProfile.photoURL}
               alt="User profile"
-              className="w-15 h-15 rounded-full object-cover"
+              className="w-12 h-12 rounded-full object-cover"
             />
-            <div className=" flex flex-col justify-center ml-2">
-              <h1 className="font-semibold text-lg">
+            <div className=" flex flex-col justify-center ml-3">
+              <h1 className="font-semibold text-lg text-black/80">
                 {username || "Loading..."}
               </h1>
               <h2 className="text-sm text-[rgb(40,112,56)] font-medium">
@@ -71,11 +80,11 @@ export default function LeftSideBar() {
                   <>
                     <i
                       className={ `text-2xl transition-colors duration-200 ${
-                      isActive ? "text-[#fbc02d] bi bi-house-door-fill" : "bi bi-house-door"
+                      isActive ? "text-[#fbc02d] bi bi-house-door" : "bi bi-house-door"
                       }`}
                     ></i>
                     <span
-                      className={isActive ? "font-semibold text-gray-900" : ""}
+                      className={isActive ? "font-semibold text-gray-900" : "font-light"}
                     >
                       Home
                     </span>
@@ -88,11 +97,11 @@ export default function LeftSideBar() {
                   <>
                     <i
                       className={ `text-2xl transition-colors duration-200 ${
-                      isActive ? "text-[#fbc02d] bi bi-bell-fill" : "bi bi-bell"
+                      isActive ? "text-[#fbc02d] bi bi-bell" : "bi bi-bell"
                       }`}
                     ></i>
                     <span
-                      className={isActive ? "font-semibold text-gray-900" : ""}
+                      className={isActive ? "font-semibold text-gray-900" : "border-l-4 border-transparent  font-light"}
                     >
                       Notifications
                     </span>
@@ -109,7 +118,7 @@ export default function LeftSideBar() {
                       }`}
                     ></i>
                     <span
-                      className={isActive ? "font-semibold text-gray-900" : ""}
+                      className={isActive ? "font-semibold text-gray-900" : " border-l-4 border-transparent  font-light"}
                     >
                       Heatmap
                     </span>
@@ -123,11 +132,11 @@ export default function LeftSideBar() {
                   <>
                     <i
                       className={ `text-2xl transition-colors duration-200 ${
-                      isActive ? "text-[#fbc02d] bi bi-people-fill" : "bi bi-people"
+                      isActive ? "text-[#fbc02d] bi bi-people" : "bi bi-people"
                       }`}
                     ></i>
                     <span
-                      className={isActive ? "font-semibold text-gray-900" : "border-l-4 border-transparent"}
+                      className={isActive ? "font-semibold text-gray-900" : "border-l-4 border-transparent font-light"}
                     >
                       Organizations
                     </span>
@@ -141,11 +150,11 @@ export default function LeftSideBar() {
                   <>
                     <i
                       className={ `text-2xl transition-colors duration-200 ${
-                      isActive ? "text-[#fbc02d] bi bi-person-fill" : "bi bi-person"
+                      isActive ? "text-[#fbc02d] bi bi-person" : "bi bi-person"
                       }`}
                     ></i>
                     <span
-                      className={isActive ? "font-semibold text-gray-900" : "border-l-4 border-transparent"}
+                      className={isActive ? "font-semibold text-gray-900" : "border-l-4 border-transparent font-light"}
                     >
                       Profile
                     </span>
@@ -161,7 +170,7 @@ export default function LeftSideBar() {
               <button
                 type="button"
                 aria-label="Post"
-                className="text-lg bg-[#2e7d32] w-full px-2 py-3 text-white hover:bg-[rgb(40,112,56)] rounded-full duration-200 ease-in cursor-pointer"
+                className="text-lg bg-[#2e7d32]  w-full px-2 py-3 text-white hover:bg-[rgb(28,79,39)] rounded-full duration-200 ease-in cursor-pointer"
                 onClick={() => setIsOpen(true)}
               >
                 Post
