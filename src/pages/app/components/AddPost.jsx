@@ -1,3 +1,4 @@
+import SelectLocation from "./SelectLocation";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import defaultImg from "../../../assets/default_img.jpg";
@@ -34,6 +35,8 @@ export default function AddPost({ isOpen, onClose }) {
 
   const [photo, setPhoto] = useState(null);
   const [photoPreview, setPhotoPreview] = useState(null);
+
+  const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
 
   const handlePhotoChange = (e) => {
     const file = e.target.files[0];
@@ -289,31 +292,19 @@ export default function AddPost({ isOpen, onClose }) {
                   </label>
                 </div>
 
-                {/*Location*/}
+                {/* Location */}
                 <div className="flex items-center transition-all ease-in gap-2 cursor-pointer">
                   <button
                     type="button"
-                    className=" text-white text-xs space-x-1  w-full hover:bg-yellow-100 cursor-pointer p-2 rounded-full "
-                    onClick={handleGetLocation}
-                    disabled={loadingLocation}
+                    onClick={() => setIsLocationModalOpen(true)}
+                    className="text-xs flex items-center gap-1 hover:bg-yellow-100 p-2 rounded-full"
                   >
-                    {loadingLocation ? (
-                      "Getting location..."
-                    ) : (
-                      <div className="flex items-center">
-                        <i className="bi bi-geo-alt-fill text-[#fbc02d]"></i>
-                        <label className="text-xs text-gray-400 cursor-pointer ">
-                          {location ? (
-                            <p className="text-xs px-2 text-gray-400 italic w-full truncate">
-                              {location.lat.toFixed(5)},{" "}
-                              {location.lng.toFixed(5)}
-                            </p>
-                          ) : (
-                            "Location"
-                          )}
-                        </label>
-                      </div>
-                    )}
+                    <i className="bi bi-geo-alt-fill text-[#fbc02d]"></i>
+                    <span className="text-gray-400">
+                      {location
+                        ? `${location.lat.toFixed(5)}, ${location.lng.toFixed(5)}`
+                        : "Set Location"}
+                    </span>
                   </button>
                 </div>
               </div>
@@ -325,6 +316,16 @@ export default function AddPost({ isOpen, onClose }) {
               </button>
             </div>
           </form>
+          {/* Location Modal */}
+          {isLocationModalOpen && (
+            <SelectLocation
+              onClose={() => setIsLocationModalOpen(false)}
+              onSelect={(selectedLocation) => {
+                if (selectedLocation) setLocation(selectedLocation);
+                setIsLocationModalOpen(false);
+              }}
+            />
+          )}
         </div>
       </div>
     </div>
