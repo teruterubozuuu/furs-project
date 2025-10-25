@@ -11,7 +11,10 @@
     "start": "react-scripts start"
   },
   "dependencies": {
+    "@headlessui/react": "^2.2.9",
+    "@heroicons/react": "^2.2.0",
     "@tailwindcss/vite": "^4.1.8",
+    "@tailwindplus/elements": "^1.0.18",
     "bootstrap-icons": "^1.13.1",
     "firebase": "^11.9.1",
     "leaflet": "^1.9.4",

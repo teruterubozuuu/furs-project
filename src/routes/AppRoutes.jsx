@@ -20,12 +20,12 @@ function AppRoutes() {
           element={
             <RedirectIfAuthenticated>
               <LandingPageLayout>
-                <LandingPage/>
+                <LandingPage />
               </LandingPageLayout>
             </RedirectIfAuthenticated>
           }
         />
-        
+
         <Route
           path="/login"
           element={
@@ -64,13 +64,24 @@ function AppRoutes() {
           element={
             <RequireAuth>
               <AppLayout>
-                <Profile/>
+                <Profile />
               </AppLayout>
             </RequireAuth>
           }
         />
 
-       <Route
+        <Route
+          path="/profile/:userId" // <-- This colon (:) is essential!
+          element={
+            <RequireAuth>
+              <AppLayout>
+                <Profile />
+              </AppLayout>
+            </RequireAuth>
+          }
+        />
+
+        <Route
           path="/heatmap"
           element={
             <RequireAuth>
@@ -80,7 +91,6 @@ function AppRoutes() {
             </RequireAuth>
           }
         />
-
       </Routes>
     </>
   );

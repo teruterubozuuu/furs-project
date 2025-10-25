@@ -17,7 +17,7 @@ export default function LPNavbar() {
           <NavLink to="/contact">Contact</NavLink>
           <NavLink
             to="/login"
-            className="bg-[#2e7d32] text-white py-[4px] px-8 rounded-sm font-semibold"
+            className="bg-[#2e7d32] hover:bg-[#1e5720] transition-all ease-in text-white py-[4px] px-8 rounded-sm font-semibold"
           >
             Login
           </NavLink>

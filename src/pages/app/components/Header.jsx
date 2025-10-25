@@ -7,16 +7,13 @@ export default function Header() {
 
   return (
     <>
-      <header className="bg-[#2e7d32] shadow-md xl:sticky top-0 p-2">
-        <div className="flex justify-between xl:justify-center items-center gap-10 text-[#f5f5f5]">
+      <header className="bg-[#2e7d32] shadow-md xl:sticky top-0 p-2 xl:hidden">
+        <div className="flex justify-between xl:justify-between px-3  items-center gap-10 text-[#f5f5f5]">
           <img
             src={logo}
             alt="Furs Logo"
             className="w-10 h-auto object-contain"
           />
-
-          <TopNavbar />
-
             {/* Profile */}
             <div className="flex flex-col items-center">
               <NavLink
