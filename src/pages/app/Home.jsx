@@ -7,13 +7,13 @@ import { db } from "../../firebase/config";
 // 🚨 CORRECT IMPORT 2: Import all necessary functions directly from the Firebase SDK.
 import {
   collection,
-  getDocs,
   query,
   orderBy,
   doc,
   getDoc,
   deleteDoc,
   updateDoc,
+  onSnapshot, // for real-time updates
   // 🚨 FIX: These specialized methods must be imported from the SDK
   arrayUnion,
   arrayRemove,
@@ -30,7 +30,8 @@ const getCollectionName = (postType) => {
   if (postType === "Stray Animal") return "stray_animal_posts";
   if (postType === "Lost Pet") return "lost_pet_posts";
   if (postType === "Unknown") return "unknown_status";
-  return null;
+  // fallback for general posts collection to match AddPost.jsx
+  return "posts";
 };
 
 export default function Home() {
@@ -141,77 +142,82 @@ export default function Home() {
   };
 
   // ------------------------------------------
-  // 4. FETCH ALL POSTS (FEED CONTENT)
+  // 4. FETCH ALL POSTS (FEED CONTENT) - NOW REAL-TIME
   // ------------------------------------------
   useEffect(() => {
-    const fetchAllPosts = async () => {
-      setIsLoading(true);
-      try {
-        const strayRef = collection(db, "stray_animal_posts");
-        const lostRef = collection(db, "lost_pet_posts");
-        const unknownRef = collection(db, "unknown_status");
+    setIsLoading(true);
 
-        const [straySnap, lostSnap, unknownSnap] = await Promise.all([
-          getDocs(query(strayRef, orderBy("createdAt", "desc"))),
-          getDocs(query(lostRef, orderBy("createdAt", "desc"))),
-          getDocs(query(unknownRef, orderBy("createdAt", "desc"))),
-        ]);
+    // include the "posts" collection where AddPost.jsx saves
+    const postsRef = collection(db, "posts");
+    const strayRef = collection(db, "stray_animal_posts");
+    const lostRef = collection(db, "lost_pet_posts");
+    const unknownRef = collection(db, "unknown_status");
 
-        const strayPosts = straySnap.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-          type: "Stray Animal",
-        }));
+    const unsubPosts = onSnapshot(
+      query(postsRef, orderBy("createdAt", "desc")),
+      (snapshot) => handleSnapshot(snapshot, "General")
+    );
+    const unsubStray = onSnapshot(
+      query(strayRef, orderBy("createdAt", "desc")),
+      (snapshot) => handleSnapshot(snapshot, "Stray Animal")
+    );
+    const unsubLost = onSnapshot(
+      query(lostRef, orderBy("createdAt", "desc")),
+      (snapshot) => handleSnapshot(snapshot, "Lost Pet")
+    );
+    const unsubUnknown = onSnapshot(
+      query(unknownRef, orderBy("createdAt", "desc")),
+      (snapshot) => handleSnapshot(snapshot, "Unknown")
+    );
 
-        const lostPosts = lostSnap.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-          type: "Lost Pet",
-        }));
-
-        const unknownPosts = unknownSnap.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-          type: "Unknown",
-        }));
-
-        const combined = [...strayPosts, ...lostPosts, ...unknownPosts].sort(
-          (a, b) => {
-            const aDate = a.createdAt?.toDate?.() || new Date(0);
-            const bDate = b.createdAt?.toDate?.() || new Date(0);
-            return bDate - aDate;
-          }
-        );
-
-        // Perform reverse geocoding
-        const updatedPosts = await Promise.all(
-          combined.map(async (post) => {
-            if (post.location?.lat && post.location?.lng) {
-              const url = `https://nominatim.openstreetmap.org/reverse?lat=${post.location.lat}&lon=${post.location.lng}&format=json&accept-language=en`;
-              try {
-                const response = await fetch(url);
-                const data = await response.json();
-                const address = data.display_name || "Address not found";
-                return { ...post, address };
-              } catch (error) {
-                console.error("Reverse geocoding error:", error);
-                return { ...post, address: "Address error" };
-              }
-            }
-            return { ...post, address: "No coordinates" };
-          })
-        );
-
-        setPosts(updatedPosts);
-      } catch (error) {
-        console.error("Error fetching posts:", error);
-      } finally {
-        setIsLoading(false);
-      }
+    // Cleanup listeners
+    return () => {
+      unsubPosts();
+      unsubStray();
+      unsubLost();
+      unsubUnknown();
     };
-
-    fetchAllPosts();
   }, []);
+
+  // ------------------------------------------
+  // 5. HELPER: Handle snapshot updates
+  // ------------------------------------------
+  const handleSnapshot = async (snapshot, type) => {
+    const newPosts = await Promise.all(
+      snapshot.docs.map(async (docSnap) => {
+        const data = docSnap.data();
+        if (data.location?.lat && data.location?.lng) {
+          try {
+            const res = await fetch(
+              `https://nominatim.openstreetmap.org/reverse?lat=${data.location.lat}&lon=${data.location.lng}&format=json&accept-language=en`
+            );
+            const json = await res.json();
+            return {
+              id: docSnap.id,
+              ...data,
+              type,
+              address: json.display_name || "Address not found",
+            };
+          } catch {
+            return { id: docSnap.id, ...data, type, address: "Address error" };
+          }
+        }
+        return { id: docSnap.id, ...data, type, address: "No coordinates" };
+      })
+    );
+
+    setPosts((prev) => {
+      const others = prev.filter((p) => p.type !== type);
+      const merged = [...others, ...newPosts];
+      return merged.sort((a, b) => {
+        const aDate = a.createdAt?.toDate?.() || new Date(0);
+        const bDate = b.createdAt?.toDate?.() || new Date(0);
+        return bDate - aDate;
+      });
+    });
+
+    setIsLoading(false);
+  };
 
   return (
     <div className="space-y-3 ">

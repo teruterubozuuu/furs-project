@@ -23,6 +23,7 @@
     "react": "^19.1.0",
     "react-confirm-alert": "^3.0.6",
     "react-dom": "^19.1.0",
+    "react-hot-toast": "^2.6.0",
     "react-leaflet": "^5.0.0",
     "react-loading-indicators": "^1.0.1",
     "react-router-dom": "^7.6.2",
