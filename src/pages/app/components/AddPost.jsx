@@ -23,7 +23,7 @@ export default function AddPost({ isOpen, onClose }) {
   const [photo, setPhoto] = useState(null);
   const [photoPreview, setPhotoPreview] = useState(null);
   const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false); // ✅ for visual feedback
+  const [isSubmitting, setIsSubmitting] = useState(false); 
 
   const coatColor = [
     "White",

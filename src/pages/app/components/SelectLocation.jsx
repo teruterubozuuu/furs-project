@@ -12,7 +12,7 @@ const markerIcon = new L.Icon({
 function RecenterMap({ position }) {
   const map = useMap();
   useEffect(() => {
-    if (position) map.setView(position, 15, { animate: true });
+    if (position) map.setView(position, 16, { animate: true }); 
   }, [position]);
   return null;
 }
@@ -225,8 +225,8 @@ export default function SelectLocation({ onClose, onSelect }) {
             </div>
           )}
           <MapContainer
-            center={position || [14.5995, 120.9842]}
-            zoom={13}
+            center={position || [14.629508, 121.041873]} // default to CIIT if no position
+            zoom={16}
             className="h-full w-full rounded-lg"
           >
             <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
