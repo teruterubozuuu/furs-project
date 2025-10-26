@@ -149,33 +149,15 @@ export default function Home() {
 
     // include the "posts" collection where AddPost.jsx saves
     const postsRef = collection(db, "posts");
-    const strayRef = collection(db, "stray_animal_posts");
-    const lostRef = collection(db, "lost_pet_posts");
-    const unknownRef = collection(db, "unknown_status");
 
     const unsubPosts = onSnapshot(
       query(postsRef, orderBy("createdAt", "desc")),
       (snapshot) => handleSnapshot(snapshot, "General")
     );
-    const unsubStray = onSnapshot(
-      query(strayRef, orderBy("createdAt", "desc")),
-      (snapshot) => handleSnapshot(snapshot, "Stray Animal")
-    );
-    const unsubLost = onSnapshot(
-      query(lostRef, orderBy("createdAt", "desc")),
-      (snapshot) => handleSnapshot(snapshot, "Lost Pet")
-    );
-    const unsubUnknown = onSnapshot(
-      query(unknownRef, orderBy("createdAt", "desc")),
-      (snapshot) => handleSnapshot(snapshot, "Unknown")
-    );
 
     // Cleanup listeners
     return () => {
       unsubPosts();
-      unsubStray();
-      unsubLost();
-      unsubUnknown();
     };
   }, []);
 
@@ -287,12 +269,16 @@ export default function Home() {
                   <div className="flex h-full items-center">
                     {/* 🚨 FIX: Post Avatar */}
                     <img
-                      src={isOwner ? currentUserProfile.photoURL : defaultImg}
+                      src={
+                        isOwner
+                          ? currentUserProfile.photoURL
+                          : post.userPhoto || defaultImg
+                      }
                       alt="Profile"
-                      className="w-12 h-12 rounded-full object-cover"
+                      className="w-14 h-14 rounded-full object-cover"
                     />
 
-                    <div className="pl-2 space-y-1">
+                    <div className="pl-2">
                       <div className="flex items-center gap-2 flex-wrap">
                         <Link
                           to={profilePath}
@@ -305,21 +291,42 @@ export default function Home() {
                         </Link>
                         <p className="text-[11px] text-gray-600">
                           {post.createdAt?.toDate
-                            ? post.createdAt.toDate().toLocaleString()
+                            ? post.createdAt.toDate().toLocaleString("en-US", {
+                                year: "numeric",
+                                month: "short",
+                                day: "numeric",
+                                hour: "numeric",
+                                minute: "2-digit",
+                                hour12: true,
+                              })
                             : "Just now"}
                         </p>
                       </div>
-                      <span
-                        className={`text-xs p-1 border rounded-sm ${
-                          post.status === "Stray Animal"
-                            ? "bg-red-100 text-red-700 border-red-300"
-                            : post.status === "Lost Pet"
-                            ? "bg-yellow-100 text-yellow-700 border-yellow-300"
-                            : "bg-gray-100 text-gray-700 border-gray-300"
-                        }`}
-                      >
-                        {post.status}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={`text-xs p-1 border rounded-sm ${
+                            post.status === "Stray Animal"
+                              ? "bg-red-100 text-red-700 border-red-300"
+                              : post.status === "Lost Pet"
+                              ? "bg-yellow-100 text-yellow-700 border-yellow-300"
+                              : "bg-gray-100 text-gray-700 border-gray-300"
+                          }`}
+                        >
+                          {post.status}
+                        </span>
+                        {/* Dog characteristics */}
+                        <div className="flex py-1 gap-2">
+                          <span className="text-xs p-1 border bg-green-100 text-green-700 border-green-300 rounded-sm">
+                            {post.coatColor}
+                          </span>
+
+                          {post.breed && (
+                            <span className="text-xs p-1 border bg-green-100 text-green-700 border-green-300 rounded-sm">
+                              {post.breed}
+                            </span>
+                          )}
+                        </div>
+                      </div>
                     </div>
                   </div>
 
@@ -370,19 +377,6 @@ export default function Home() {
 
                 {/* Description */}
                 <p>{post.description}</p>
-
-                {/* Dog characteristics */}
-                <div className="flex py-1 gap-3">
-                  <span className="text-xs p-1 border bg-green-100 text-green-700 border-green-300 rounded-sm">
-                    {post.coatColor}
-                  </span>
-
-                  {post.breed && (
-                    <span className="text-xs p-1 border bg-green-100 text-green-700 border-green-300 rounded-sm">
-                      {post.breed}
-                    </span>
-                  )}
-                </div>
 
                 {/* Photo */}
                 <div className="flex justify-center p-3">
