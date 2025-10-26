@@ -13,9 +13,6 @@ export default function Heatmap() {
     // include all relevant collections (old + new)
     const collections = [
       "posts",
-      "stray_animal_posts",
-      "lost_pet_posts",
-      "unknown_status",
     ];
     const unsubscribeFns = [];
 
