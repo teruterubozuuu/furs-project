@@ -32,13 +32,17 @@ export default function RedirectIfAuthenticated({ children }) {
     fetchUserRole();
   }, [user]);
 
-  if (loading) return null; // or a loader component
+  // 🚨 Don't render or redirect until we know the user role
+  if (loading) return null;
 
-  if (user && (location.pathname === "/login" || location.pathname === "/signup")) {
-    if (userRole === "Admin") {
-      return <Navigate to="/admin/dashboard" replace />;
-    } else {
-      return <Navigate to="/home" replace />;
+  // Only redirect when user and userRole are both ready
+  if (user && userRole) {
+    if (location.pathname === "/login" || location.pathname === "/signup") {
+      if (userRole === "Admin") {
+        return <Navigate to="/admin/dashboard" replace />;
+      } else {
+        return <Navigate to="/home" replace />;
+      }
     }
   }
 

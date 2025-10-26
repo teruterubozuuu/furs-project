@@ -44,7 +44,6 @@ export default function LoginPage() {
       }
 
       console.log("Logged in successfully", user);
-      navigate("/");
     } catch (error) {
       console.error("Error logging in:", error);
       setFailedLogin(true);
