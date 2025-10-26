@@ -11,6 +11,7 @@ import Heatmap from "../pages/app/Heatmap";
 import LandingPage from "../pages/landingpage/LandingPage";
 import AdminLayout from "../pages/layout/AdminLayout";
 import Dashboard from "../pages/admin/Dashboard";
+import User from "../pages/admin/User";
 
 function AppRoutes() {
   return (
@@ -101,6 +102,17 @@ function AppRoutes() {
             <RequireAuth>
               <AdminLayout>
                 <Dashboard />
+              </AdminLayout>
+            </RequireAuth>
+          }
+        />
+
+                <Route
+          path="/admin/users"
+          element={
+            <RequireAuth>
+              <AdminLayout>
+                <User/>
               </AdminLayout>
             </RequireAuth>
           }
