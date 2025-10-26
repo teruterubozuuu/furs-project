@@ -9,6 +9,8 @@ import AppLayout from "../pages/layout/AppLayout";
 import Profile from "../pages/app/Profile";
 import Heatmap from "../pages/app/Heatmap";
 import LandingPage from "../pages/landingpage/LandingPage";
+import AdminLayout from "../pages/layout/AdminLayout";
+import Dashboard from "../pages/admin/Dashboard";
 
 function AppRoutes() {
   return (
@@ -88,6 +90,18 @@ function AppRoutes() {
               <AppLayout>
                 <Heatmap />
               </AppLayout>
+            </RequireAuth>
+          }
+        />
+
+        {/*Route for Admin Layout*/}
+        <Route
+          path="/admin/dashboard"
+          element={
+            <RequireAuth>
+              <AdminLayout>
+                <Dashboard />
+              </AdminLayout>
             </RequireAuth>
           }
         />

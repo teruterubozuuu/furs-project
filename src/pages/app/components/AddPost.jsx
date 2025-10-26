@@ -51,83 +51,91 @@ export default function AddPost({ isOpen, onClose }) {
     setPhoto(null);
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (isSubmitting) return;
-    setIsSubmitting(true);
+  
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  if (isSubmitting) return;
+  setIsSubmitting(true);
 
-    const user = auth.currentUser;
-    if (!user) {
-      alert("User not logged in");
-      setIsSubmitting(false);
-      return;
+  const user = auth.currentUser;
+  if (!user) {
+    alert("User not logged in");
+    setIsSubmitting(false);
+    return;
+  }
+
+  if (!photo) {
+    alert("Please upload a photo.");
+    setIsSubmitting(false);
+    return;
+  }
+
+  // 🔹 Fetch username & profile photo from Firestore
+  let username = "Anonymous";
+  let userPhoto = "";
+
+  try {
+    const userDoc = await getDoc(doc(db, "users", user.uid));
+    if (userDoc.exists()) {
+      const userData = userDoc.data();
+      username = userData.username || "Anonymous";
+      userPhoto = userData.profilePhoto || "";
     }
+  } catch (error) {
+    console.error("Error fetching user profile:", error);
+  }
 
-    if (!photo) {
-      alert("Please upload a photo.");
-      setIsSubmitting(false);
-      return;
-    }
+  // 🔹 Upload post photo to Firebase Storage
+  let photoURL = "";
+  try {
+    const storageRef = ref(storage, `posts/${user.uid}/${Date.now()}_${photo.name}`);
+    const snapshot = await uploadBytes(storageRef, photo);
+    photoURL = await getDownloadURL(snapshot.ref);
+  } catch (error) {
+    console.error("Error uploading photo:", error);
+    alert("Failed to upload photo.");
+    setIsSubmitting(false);
+    return;
+  }
 
-    let username = user.displayName || "Anonymous";
+  const plainLocation =
+    location && location.lat && location.lng
+      ? { lat: location.lat, lng: location.lng }
+      : null;
 
-    try {
-      const userDoc = await getDoc(doc(db, "users", user.uid));
-      if (userDoc.exists() && userDoc.data().username) {
-        username = userDoc.data().username;
-      }
-    } catch (error) {
-      console.error("Error fetching username:", error);
-    }
-
-    let photoURL = "";
-    try {
-      const storageRef = ref(storage, `posts/${user.uid}/${Date.now()}_${photo.name}`);
-      const snapshot = await uploadBytes(storageRef, photo);
-      photoURL = await getDownloadURL(snapshot.ref);
-    } catch (error) {
-      console.error("Error uploading photo:", error);
-      alert("Failed to upload photo.");
-      setIsSubmitting(false);
-      return;
-    }
-
-    const plainLocation =
-      location && location.lat && location.lng
-        ? { lat: location.lat, lng: location.lng }
-        : null;
-
-    const reportData = {
-      userId: user.uid,
-      username,
-      photoURL,
-      breed,
-      coatColor: selectedCoatColor,
-      description,
-      status: selectedReport,
-      location: plainLocation,
-      createdAt: Timestamp.now(),
-    };
-
-    try {
-      await addDoc(collection(db, "posts"), reportData);
-      alert("Report submitted successfully.");
-      onClose();
-      navigate("/home");
-    } catch (error) {
-      console.error("Error submitting report:", error);
-      alert("Failed to submit report.");
-    } finally {
-      setIsSubmitting(false);
-      setPhoto(null);
-      setPhotoPreview(null);
-      setBreed("");
-      setSelectedCoatColor("Coat/Color");
-      setSelectedReport("Report Type");
-      setDescription("");
-      setLocation(null);
-    }
+  // 🔹 Include the userPhoto and username in the post data
+  const reportData = {
+    userId: user.uid,
+    username,
+    userPhoto, // 🧩 added field for profile photo
+    photoURL,
+    breed,
+    coatColor: selectedCoatColor,
+    description,
+    status: selectedReport,
+    location: plainLocation,
+    createdAt: Timestamp.now(),
   };
+
+  try {
+    await addDoc(collection(db, "posts"), reportData);
+    alert("Report submitted successfully.");
+    onClose();
+    navigate("/home");
+  } catch (error) {
+    console.error("Error submitting report:", error);
+    alert("Failed to submit report.");
+  } finally {
+    setIsSubmitting(false);
+    setPhoto(null);
+    setPhotoPreview(null);
+    setBreed("");
+    setSelectedCoatColor("Coat/Color");
+    setSelectedReport("Report Type");
+    setDescription("");
+    setLocation(null);
+  }
+};
 
   if (!isOpen) return null;
 

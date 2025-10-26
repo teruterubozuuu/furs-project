@@ -80,7 +80,9 @@ export default function LoginPage() {
             </h1>
 
             <form className="space-y-5 text-gray-700" onSubmit={handleSubmit}>
-              {verifyError ? <p className="text-red-white text-sm w-full rounded-sm text-red-700 border border-red-300 bg-red-100 p-2">Please verify your email before logging in.</p> : null || failedLogin ? <p className="text-red-white text-sm text-red-700 border border-red-300 w-full rounded-sm bg-red-100 p-2">Incorrect email or password.</p> : null}
+              {verifyError ? <p className="text-red-white text-sm w-full rounded-sm text-red-700 border border-red-300 bg-red-100 p-2">Please 
+                verify 
+                your email before logging in.</p> : null || failedLogin ? <p className="text-red-white text-sm text-red-700 border border-red-300 w-full rounded-sm bg-red-100 p-2">Incorrect email or password.</p> : null}
               
               <div>
                 <label htmlFor="email">Email</label>
