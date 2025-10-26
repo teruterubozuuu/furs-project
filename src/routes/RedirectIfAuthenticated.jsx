@@ -32,12 +32,16 @@ export default function RedirectIfAuthenticated({ children }) {
     fetchUserRole();
   }, [user]);
 
-  // 🚨 Don't render or redirect until we know the user role
+  // Wait until role is fetched
   if (loading) return null;
 
-  // Only redirect when user and userRole are both ready
+  // If user is logged in and visiting "/", "/login", or "/signup"
   if (user && userRole) {
-    if (location.pathname === "/login" || location.pathname === "/signup") {
+    if (
+      location.pathname === "/" ||
+      location.pathname === "/login" ||
+      location.pathname === "/signup"
+    ) {
       if (userRole === "Admin") {
         return <Navigate to="/admin/dashboard" replace />;
       } else {
@@ -46,5 +50,6 @@ export default function RedirectIfAuthenticated({ children }) {
     }
   }
 
+  // If not logged in, allow landing page to show
   return children;
 }
