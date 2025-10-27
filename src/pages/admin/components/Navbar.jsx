@@ -41,7 +41,7 @@ export default function Navbar() {
         <img src={logo} alt="FURS Logo" className="lg:w-80 h-auto w-50 px-8" />
       </div>
       <div className=" flex lg:flex-col lg:items-start lg:space-y-6 lg:justify-center justify-between w-full ">
-        <NavLink to="/admin/dashboard" className={({isActive}) => `${isActive ? "flex items-center justify-center lg:justify-start gap-3 cursor-pointer px-8 w-full lg:border-l-4 border-amber-400" : "flex items-center justify-center lg:justify-start gap-3 lg:border-l-4 border-transparent cursor-pointer  px-8 w-full"}`}>
+        <NavLink to="/admin/dashboard" className={({isActive}) => `${isActive ? "flex items-center justify-center lg:justify-start gap-3 cursor-pointer px-8 w-full lg:border-l-4  border-amber-400" : "flex items-center justify-center lg:justify-start gap-3 lg:border-l-4 border-transparent cursor-pointer  px-8 w-full"}`}>
           {({isActive}) => (
             <>
               <i className={`${isActive ? "bi bi-columns-gap lg:text-lg text-2xl text-[#fbc02d]" : "bi bi-columns-gap lg:text-lg text-2xl"}`}></i>
