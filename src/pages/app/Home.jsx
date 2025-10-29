@@ -1,20 +1,17 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
-// CORRECT IMPORT 1: Import the initialized database instance
 import { db } from "../../firebase/config";
 
-// 🚨 CORRECT IMPORT 2: Import all necessary functions directly from the Firebase SDK.
 import {
   collection,
+  getDocs,
   query,
   orderBy,
   doc,
   getDoc,
   deleteDoc,
   updateDoc,
-  onSnapshot, // for real-time updates
-  // 🚨 FIX: These specialized methods must be imported from the SDK
   arrayUnion,
   arrayRemove,
 } from "firebase/firestore";
@@ -27,11 +24,10 @@ import Filter from "./components/Filter";
 
 // Helper function to determine the Firestore collection name based on post type
 const getCollectionName = (postType) => {
-  if (postType === "Stray Animal") return "stray_animal_posts";
-  if (postType === "Lost Pet") return "lost_pet_posts";
+  if (postType === "Stray") return "stray_animal_posts";
+  if (postType === "Lost") return "lost_pet_posts";
   if (postType === "Unknown") return "unknown_status";
-  // fallback for general posts collection to match AddPost.jsx
-  return "posts";
+  return null;
 };
 
 export default function Home() {
@@ -40,22 +36,15 @@ export default function Home() {
   const [isOpenFilter, setIsOpenFilter] = useState(false);
   const [posts, setPosts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [postMenu, setPostMenu] = useState(false);
-  const [openMenuId, setOpenMenuId] = useState(null);
 
   const [isEditing, setIsEditing] = useState(false);
   const [postToEdit, setPostToEdit] = useState(null);
 
-  // 🚨 NEW STATE: To hold the logged-in user's current profile data
   const [currentUserProfile, setCurrentUserProfile] = useState({
     photoURL: defaultImg,
     username: user?.displayName || "Guest",
   });
 
-  // ------------------------------------------
-  // 🚨 1. FETCH CURRENT USER PROFILE DATA
-  // This runs once to load the latest photo/username.
-  // ------------------------------------------
   useEffect(() => {
     const fetchUserProfile = async () => {
       if (!user?.uid) return;
@@ -142,67 +131,80 @@ export default function Home() {
   };
 
   // ------------------------------------------
-  // 4. FETCH ALL POSTS (FEED CONTENT) - NOW REAL-TIME
+  // 4. FETCH ALL POSTS (FEED CONTENT)
   // ------------------------------------------
   useEffect(() => {
-    setIsLoading(true);
+    const fetchAllPosts = async () => {
+      setIsLoading(true);
+      try {
+        const strayRef = collection(db, "stray_animal_posts");
+        const lostRef = collection(db, "lost_pet_posts");
+        const unknownRef = collection(db, "unknown_status");
 
-    // include the "posts" collection where AddPost.jsx saves
-    const postsRef = collection(db, "posts");
+        const [straySnap, lostSnap, unknownSnap] = await Promise.all([
+          getDocs(query(strayRef, orderBy("createdAt", "desc"))),
+          getDocs(query(lostRef, orderBy("createdAt", "desc"))),
+          getDocs(query(unknownRef, orderBy("createdAt", "desc"))),
+        ]);
 
-    const unsubPosts = onSnapshot(
-      query(postsRef, orderBy("createdAt", "desc")),
-      (snapshot) => handleSnapshot(snapshot, "General")
-    );
+        const strayPosts = straySnap.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+          type: "Stray",
+        }));
 
-    // Cleanup listeners
-    return () => {
-      unsubPosts();
+        const lostPosts = lostSnap.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+          type: "Lost",
+        }));
+
+        const unknownPosts = unknownSnap.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+          type: "Unknown",
+        }));
+
+        const combined = [...strayPosts, ...lostPosts, ...unknownPosts].sort(
+          (a, b) => {
+            const aDate = a.createdAt?.toDate?.() || new Date(0);
+            const bDate = b.createdAt?.toDate?.() || new Date(0);
+            return bDate - aDate;
+          }
+        );
+
+        // Perform reverse geocoding
+        const updatedPosts = await Promise.all(
+          combined.map(async (post) => {
+            if (post.location?.lat && post.location?.lng) {
+              const url = `https://nominatim.openstreetmap.org/reverse?lat=${post.location.lat}&lon=${post.location.lng}&format=json&accept-language=en`;
+              try {
+                const response = await fetch(url);
+                const data = await response.json();
+                const address = data.display_name || "Address not found";
+                return { ...post, address };
+              } catch (error) {
+                console.error("Reverse geocoding error:", error);
+                return { ...post, address: "Address error" };
+              }
+            }
+            return { ...post, address: "No coordinates" };
+          })
+        );
+
+        setPosts(updatedPosts);
+      } catch (error) {
+        console.error("Error fetching posts:", error);
+      } finally {
+        setIsLoading(false);
+      }
     };
+
+    fetchAllPosts();
   }, []);
 
-  // ------------------------------------------
-  // 5. HELPER: Handle snapshot updates
-  // ------------------------------------------
-  const handleSnapshot = async (snapshot, type) => {
-    const newPosts = await Promise.all(
-      snapshot.docs.map(async (docSnap) => {
-        const data = docSnap.data();
-        if (data.location?.lat && data.location?.lng) {
-          try {
-            const res = await fetch(
-              `https://nominatim.openstreetmap.org/reverse?lat=${data.location.lat}&lon=${data.location.lng}&format=json&accept-language=en`
-            );
-            const json = await res.json();
-            return {
-              id: docSnap.id,
-              ...data,
-              type,
-              address: json.display_name || "Address not found",
-            };
-          } catch {
-            return { id: docSnap.id, ...data, type, address: "Address error" };
-          }
-        }
-        return { id: docSnap.id, ...data, type, address: "No coordinates" };
-      })
-    );
-
-    setPosts((prev) => {
-      const others = prev.filter((p) => p.type !== type);
-      const merged = [...others, ...newPosts];
-      return merged.sort((a, b) => {
-        const aDate = a.createdAt?.toDate?.() || new Date(0);
-        const bDate = b.createdAt?.toDate?.() || new Date(0);
-        return bDate - aDate;
-      });
-    });
-
-    setIsLoading(false);
-  };
-
   return (
-    <div className="space-y-3 ">
+    <div className="max-w-[700px] space-y-4">
       <EditPostModal
         isOpen={isEditing}
         onClose={() => setIsEditing(false)}
@@ -211,19 +213,18 @@ export default function Home() {
       />
 
       {/* Create Post and Filter Sections */}
-      <div className=" flex justify-between items-stretch gap-2 max-w-[700px] w-full">
-        <div className="flex-1 flex flex-wrap sm:flex-nowrap items-center gap-3 px-4 rounded-lg border border-gray-200 shadow-sm bg-[#fafafa]">
+      <div className=" flex justify-between items-stretch gap-2">
+        <div className="flex-1 w-[700px] flex flex-wrap sm:flex-nowrap items-center gap-3 p-4 rounded-sm border border-gray-200 shadow-sm bg-[#fafafa]">
           <img
-            // 🚨 UPDATED: Use the fetched profile photo URL
             src={currentUserProfile.photoURL}
             alt="User profile picture"
-            className="w-8 h-auto rounded-full object-cover flex-shrink-0"
+            className="w-8 h-8 rounded-full object-cover flex-shrink-0"
           />
           <div
             onClick={() => setIsOpenPost(true)}
             className="flex-1 border border-gray-300 cursor-pointer rounded-3xl bg-gray-100 hover:bg-gray-200 transition duration-200 ease-in-out"
           >
-            <p className="w-full text-left p-1 px-2 text-gray-500 font-medium cursor-pointer">
+            <p className="w-full text-left p-2 text-gray-500 font-medium cursor-pointer">
               Create a post
             </p>
           </div>
@@ -232,7 +233,7 @@ export default function Home() {
         {/* Filter section */}
         <div
           onClick={() => setIsOpenFilter(true)}
-          className="bg-[#fafafa] flex flex-col items-center justify-center text-gray-500 border-gray-200 shadow-sm border rounded-lg p-4 hover:bg-gray-200 transition-all duration-200 ease-in-out cursor-pointer"
+          className="bg-[#fafafa] flex flex-col items-center justify-center text-gray-500 border-gray-200 shadow-sm border rounded-sm p-4 hover:bg-gray-200 transition-all duration-200 ease-in-out cursor-pointer"
         >
           <i className="bi bi-filter text-2xl"></i>
           <p className="text-[10px]">Filter</p>
@@ -242,13 +243,12 @@ export default function Home() {
       <Filter isOpen={isOpenFilter} onClose={() => setIsOpenFilter(false)} />
       <AddPost isOpen={isOpenPost} onClose={() => setIsOpenPost(false)} />
 
-      {/*POST*/}
       {isLoading ? (
-        <div className="flex justify-center py-10 xl:w-[700px]">
+        <div className="flex justify-center py-10">
           <OrbitProgress color="#2e7d32" size="large" />
         </div>
       ) : posts.length === 0 ? (
-        <div className="flex w-[650px] justify-center text-gray-500 italic font-medium text-xl mt-5">
+        <div className="flex justify-center text-gray-500 italic font-medium text-xl">
           <p>No posts yet...</p>
         </div>
       ) : (
@@ -261,7 +261,7 @@ export default function Home() {
           return (
             <div
               key={post.id}
-              className=" bg-[#fafafa] border border-gray-200 shadow-sm p-5 rounded-lg text-sm"
+              className=" bg-[#fafafa] border border-gray-200 shadow-sm p-5 rounded-sm text-sm"
             >
               {/* Post header */}
               <div className="border-b border-gray-200">
@@ -269,16 +269,12 @@ export default function Home() {
                   <div className="flex h-full items-center">
                     {/* 🚨 FIX: Post Avatar */}
                     <img
-                      src={
-                        isOwner
-                          ? currentUserProfile.photoURL
-                          : post.userPhoto || defaultImg
-                      }
+                      src={isOwner ? currentUserProfile.photoURL : defaultImg}
                       alt="Profile"
-                      className="w-14 h-14 rounded-full object-cover"
+                      className="w-15 h-15 rounded-full object-cover"
                     />
 
-                    <div className="pl-2">
+                    <div className="pl-2 space-y-1">
                       <div className="flex items-center gap-2 flex-wrap">
                         <Link
                           to={profilePath}
@@ -291,92 +287,58 @@ export default function Home() {
                         </Link>
                         <p className="text-[11px] text-gray-600">
                           {post.createdAt?.toDate
-                            ? post.createdAt.toDate().toLocaleString("en-US", {
-                                year: "numeric",
-                                month: "short",
-                                day: "numeric",
-                                hour: "numeric",
-                                minute: "2-digit",
-                                hour12: true,
-                              })
+                            ? post.createdAt.toDate().toLocaleString()
                             : "Just now"}
                         </p>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <span
-                          className={`text-xs p-1 border rounded-sm ${
-                            post.status === "Stray Animal"
-                              ? "bg-red-100 text-red-700 border-red-300"
-                              : post.status === "Lost Pet"
-                              ? "bg-yellow-100 text-yellow-700 border-yellow-300"
-                              : "bg-gray-100 text-gray-700 border-gray-300"
-                          }`}
-                        >
-                          {post.status}
-                        </span>
-                        {/* Dog characteristics */}
-                        <div className="flex py-1 gap-2">
-                          <span className="text-xs p-1 border bg-green-100 text-green-700 border-green-300 rounded-sm">
-                            {post.coatColor}
-                          </span>
-
-                          {post.breed && (
-                            <span className="text-xs p-1 border bg-green-100 text-green-700 border-green-300 rounded-sm">
-                              {post.breed}
-                            </span>
-                          )}
-                        </div>
-                      </div>
+                      <span
+                        className={`text-xs p-1 border rounded-sm ${
+                          post.status === "Stray"
+                            ? "bg-red-100 text-red-700 border-red-300"
+                            : post.status === "Lost Pet"
+                            ? "bg-yellow-100 text-yellow-700 border-yellow-300"
+                            : "bg-gray-100 text-gray-700 border-gray-300"
+                        }`}
+                      >
+                        {post.status}
+                      </span>
                     </div>
                   </div>
 
                   {/* Edit/Delete Buttons */}
-                  <div>
-                    {isOwner && (
-                      <div className="relative flex flex-col items-end">
-                        {/* Post Menu */}
-                        <div className="relative flex flex-col items-end">
-                          {/* Post Menu Button */}
-                          <i
-                            onClick={() =>
-                              setOpenMenuId(
-                                openMenuId === post.id ? null : post.id
-                              )
-                            }
-                            className="cursor-pointer bi bi-three-dots text-gray-500 hover:text-gray-700 font-medium transition duration-150 ease-in-out text-lg flex justify-end"
-                          ></i>
-
-                          {/* Dropdown Menu */}
-                          {openMenuId === post.id && (
-                            <div className="flex flex-col items-start border border-gray-200 bg-white w-[80px] rounded-md absolute top-5 right-0 z-10 shadow-sm">
-                              <button
-                                onClick={() => {
-                                  handleEditPost(post);
-                                  setOpenMenuId(null);
-                                }}
-                                className="cursor-pointer text-xs text-start pl-3 text-gray-600 w-full hover:bg-gray-200 transition duration-150 ease-in-out py-2"
-                              >
-                                Edit
-                              </button>
-                              <button
-                                onClick={() => {
-                                  handleDeletePost(post.id, post.type);
-                                  setOpenMenuId(null);
-                                }}
-                                className="cursor-pointer text-xs text-start pl-3 text-gray-600 w-full hover:bg-gray-200 transition duration-150 ease-in-out py-2"
-                              >
-                                Delete
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                  </div>
+                  {isOwner && (
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleEditPost(post)}
+                        className="text-xs text-blue-600 hover:text-blue-800 transition duration-150 ease-in-out"
+                      >
+                        <i className="bi bi-pencil-square"></i> Edit
+                      </button>
+                      <button
+                        onClick={() => handleDeletePost(post.id, post.type)}
+                        className="text-xs text-red-600 hover:text-red-800 transition duration-150 ease-in-out"
+                      >
+                        <i className="bi bi-trash"></i> Delete
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 {/* Description */}
                 <p>{post.description}</p>
+
+                {/* Dog characteristics */}
+                <div className="flex py-1 gap-3">
+                  <span className="text-xs p-1 border bg-green-100 text-green-700 border-green-300 rounded-sm">
+                    {post.color}
+                  </span>
+
+                  {post.breed && (
+                    <span className="text-xs p-1 border bg-green-100 text-green-700 border-green-300  rounded-sm">
+                      {post.breed}
+                    </span>
+                  )}
+                </div>
 
                 {/* Photo */}
                 <div className="flex justify-center p-3">

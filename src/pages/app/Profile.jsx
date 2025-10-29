@@ -60,23 +60,19 @@ const StarRatingDisplay = ({ rating, count }) => {
 // --- Post Card Component (Assuming defined locally) ---
 const PostCard = ({ post }) => (
   <div className="border border-gray-200 p-4 rounded-lg shadow-sm bg-white space-y-3">
-     {" "}
+    {" "}
     <div className="flex justify-between items-start">
       {" "}
       <p className="text-xs text-gray-500 font-medium">
-        Type: {" "}
-        <span className="font-semibold text-green-700">{post.postType}</span>
-        {" "}
-      </p>
-      {" "}
+        Type:{" "}
+        <span className="font-semibold text-green-700">{post.postType}</span>{" "}
+      </p>{" "}
       {post.createdAt && (
         <p className="text-xs text-gray-400">
-           {post.createdAt.toDate().toLocaleDateString()}{" "}
+          {post.createdAt.toDate().toLocaleDateString()}{" "}
         </p>
-      )}
-      {" "}
-    </div>
-    {" "}
+      )}{" "}
+    </div>{" "}
     {post.photoURL && (
       <div className="flex justify-center p-2 bg-gray-50 rounded-lg">
         {" "}
@@ -84,25 +80,20 @@ const PostCard = ({ post }) => (
           src={post.photoURL}
           alt={`${post.type} photo`}
           className="w-full h-auto max-h-96 object-contain rounded-sm"
-        />
-        {" "}
+        />{" "}
       </div>
-    )}
-    {" "}
+    )}{" "}
     <div className="border-t pt-3">
-       <p className="font-semibold text-sm mb-1">Description:</p>{" "}
+      <p className="font-semibold text-sm mb-1">Description:</p>{" "}
       <p className="text-gray-700 text-sm">
         {post.description || "No detailed description available."}{" "}
-      </p>
-      {" "}
-    </div>
-    {" "}
+      </p>{" "}
+    </div>{" "}
     {post.address && (
       <div className="text-xs text-gray-500 italic mt-2">
         Location: {post.address}{" "}
       </div>
-    )}
-    {" "}
+    )}{" "}
   </div>
 );
 // ------------------------------------------------------------------------
@@ -177,38 +168,37 @@ export default function Profile() {
     fetchUserData();
   }, [targetUserId, user, isOwner]);
 
-useEffect(() => {
-  const fetchUserPosts = async () => {
-    if (!targetUserId) return; // don't query yet if undefined
+  useEffect(() => {
+    const fetchUserPosts = async () => {
+      if (!targetUserId) return; // don't query yet if undefined
 
-    setLoadingPosts(true);
-    try {
-      const postsQuery = query(
-        collection(db, "posts"),
-        where("userId", "==", targetUserId),
-        orderBy("createdAt", "desc")
-      );
-      const querySnapshot = await getDocs(postsQuery);
+      setLoadingPosts(true);
+      try {
+        const postsQuery = query(
+          collection(db, "posts"),
+          where("userId", "==", targetUserId),
+          orderBy("createdAt", "desc")
+        );
+        const querySnapshot = await getDocs(postsQuery);
 
-      const allPosts = querySnapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-        postType: doc.data().status,
-      }));
+        const allPosts = querySnapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+          postType: doc.data().status,
+        }));
 
-      console.log("Fetched posts:", allPosts); // ✅ Debug log
-      setUserPosts(allPosts);
-    } catch (error) {
-      console.error("Error fetching user posts:", error);
-    } finally {
-      setLoadingPosts(false);
-    }
-  };
+        console.log("Fetched posts:", allPosts); // ✅ Debug log
+        setUserPosts(allPosts);
+      } catch (error) {
+        console.error("Error fetching user posts:", error);
+      } finally {
+        setLoadingPosts(false);
+      }
+    };
 
-  // ✅ Only fetch when targetUserId exists and user is loaded
-  if (targetUserId || user) fetchUserPosts();
-}, [targetUserId, user]);
-
+    // ✅ Only fetch when targetUserId exists and user is loaded
+    if (targetUserId || user) fetchUserPosts();
+  }, [targetUserId, user]);
 
   const handlePhotoChange = (e) => {
     const file = e.target.files[0];

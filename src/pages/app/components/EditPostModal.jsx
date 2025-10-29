@@ -1,8 +1,6 @@
 // ./components/EditPostModal.jsx
 import React, { useState, useEffect } from "react";
 
-// NOTE: You will need to import 'updateDoc' and 'doc' from Firebase in Home.jsx
-
 export default function EditPostModal({ isOpen, onClose, post, onUpdate }) {
   // Only render if the modal is open and we have a post to edit
   if (!isOpen || !post) return null;
@@ -37,7 +35,6 @@ export default function EditPostModal({ isOpen, onClose, post, onUpdate }) {
   };
 
   return (
-    // Basic Modal Structure (Tailwind/Vite styling based on your structure)
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white p-6 rounded-lg shadow-2xl max-w-md w-full">
         <h2 className="text-xl font-semibold mb-4 border-b pb-2">
