@@ -126,7 +126,7 @@ useEffect(() => {
                   </label>
                 </div>
 
-                <NavLink to="/" className="cursor-pointer text-gray-400 hover:text-gray-600 transition-all ease-in">
+                <NavLink to="/forgotpassword" className="cursor-pointer text-gray-400 hover:text-gray-600 transition-all ease-in">
                   Forgot password?
                 </NavLink>
               </div>
