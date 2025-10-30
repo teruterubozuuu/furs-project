@@ -66,34 +66,6 @@ useEffect(() => {
     }
   };
 
-  /*
-  const handleLoginWithGoogle = async () => {
-    try {
-      await setPersistence(
-        auth,
-        isChecked ? browserLocalPersistence : browserSessionPersistence
-      );
-      await signInWithRedirect(auth, provider);
-    } catch (error) {
-      console.error("Error logging in with Google:", error);
-      alert("Google login failed. Please try again.");
-    }
-  };
-
-useEffect(() => {
-  const checkRedirectResult = async () => {
-    try {
-      const result = await getRedirectResult(auth);
-      if (result?.user) {
-        console.log("Logged in with Google successfully", result.user);
-      }
-    } catch (error) {
-      console.error("Error getting redirect result:", error);
-    }
-  };
-  checkRedirectResult();
-}, []);
-*/
   return (
     <>
     
