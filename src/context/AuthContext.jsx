@@ -1,5 +1,5 @@
-import { createContext,useContext,useEffect,useState } from "react";
-import { onAuthStateChanged } from "firebase/auth";
+import { createContext, useContext, useEffect, useState } from "react";
+import { onAuthStateChanged, getRedirectResult } from "firebase/auth";
 import { auth } from "../firebase/config";
 
 const AuthContext = createContext();
@@ -9,21 +9,38 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser);
-      setLoading(false);
-    });
+    const initializeAuth = async () => {
+      try {
+        // 🔍 Handle Google redirect user if it exists
+        const result = await getRedirectResult(auth);
+        if (result?.user) {
+          setUser(result.user);
+        }
 
-    return () => unsubscribe();
+        // 🔁 Always listen for ongoing auth state changes
+        const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+          console.log("Auth state changed:", currentUser);
+          setUser(currentUser);
+          setLoading(false);
+        });
+
+        return () => unsubscribe();
+      } catch (error) {
+        console.error("Error initializing auth:", error);
+        setLoading(false);
+      }
+    };
+
+    initializeAuth();
   }, []);
 
   return (
-    <AuthContext.Provider value={{user}}>
+    <AuthContext.Provider value={{ user }}>
       {!loading && children}
     </AuthContext.Provider>
   );
 }
 
-  export function useAuth() {
-    return useContext(AuthContext);
-  }
+export function useAuth() {
+  return useContext(AuthContext);
+}

@@ -6,13 +6,14 @@ import {
   browserLocalPersistence,
   browserSessionPersistence,
   signInWithEmailAndPassword,
-  signInWithPopup,
-  GoogleAuthProvider,
+  GoogleAuthProvider, signInWithRedirect, getRedirectResult,
   signOut,
 } from "firebase/auth";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useAuth } from "../context/AuthContext";
 
 export default function LoginPage() {
+  const {user} = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isChecked, setIsChecked] = useState(false);
@@ -21,6 +22,18 @@ export default function LoginPage() {
   const [failedLogin, setFailedLogin] = useState(false);
   const navigate = useNavigate();
   const provider = new GoogleAuthProvider();
+
+
+  useEffect(() => {
+  if (user) {
+    
+    navigate("/home");
+  }
+}, [user, navigate]);
+
+useEffect(() => {
+  console.log("Auth state changed:", user);
+}, [user]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -53,24 +66,37 @@ export default function LoginPage() {
     }
   };
 
+  /*
   const handleLoginWithGoogle = async () => {
     try {
       await setPersistence(
         auth,
         isChecked ? browserLocalPersistence : browserSessionPersistence
       );
-      const result = await signInWithPopup(auth, provider);
-      const user = result.user;
-      console.log("Logged in with Google successfully", user);
-      navigate("/");
+      await signInWithRedirect(auth, provider);
     } catch (error) {
       console.error("Error logging in with Google:", error);
       alert("Google login failed. Please try again.");
     }
   };
 
+useEffect(() => {
+  const checkRedirectResult = async () => {
+    try {
+      const result = await getRedirectResult(auth);
+      if (result?.user) {
+        console.log("Logged in with Google successfully", result.user);
+      }
+    } catch (error) {
+      console.error("Error getting redirect result:", error);
+    }
+  };
+  checkRedirectResult();
+}, []);
+*/
   return (
     <>
+    
       <main className="h-screen bg-[url(/src/assets/app_bg2.png)] bg-cover bg-center flex xl:pt-20 pt-10 justify-center">
         <section>
           <div className="md:w-[400px] border relative z-80 px-8 py-16 rounded-lg bg-[#ffffff]/90 border-gray-200 shadow-lg">
@@ -139,7 +165,8 @@ export default function LoginPage() {
               >
                 Log In
               </button>
-
+              
+              {/*} TANGGALIN Q MUNA TO KSI ANG SAKIT SA ULO AYUSIN-
               <div className="flex text-gray-300 gap-5 items-center justify-center">
                 <hr className="flex-grow"></hr>
                 <p className="text-gray-400 text-sm">OR</p>
@@ -165,6 +192,7 @@ export default function LoginPage() {
                   Continue with Google
                 </button>
               </div>
+              */}
 
               <div className="text-sm block text-center cursor-pointer font-medium">
                 <span className="font-normal text-gray-500">
