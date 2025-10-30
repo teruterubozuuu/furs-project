@@ -12,6 +12,7 @@ import LandingPage from "../pages/landingpage/LandingPage";
 import AdminLayout from "../pages/layout/AdminLayout";
 import Dashboard from "../pages/admin/Dashboard";
 import User from "../pages/admin/User";
+import ForgotPassword from "../pages/ForgotPassword";
 
 function AppRoutes() {
   return (
@@ -47,6 +48,15 @@ function AppRoutes() {
                 <RegisterPage />
               </LandingPageLayout>
             </RedirectIfAuthenticated>
+          }
+        />
+
+        <Route
+          path="/forgotpassword"
+          element={
+            <LandingPageLayout>
+              <ForgotPassword/>
+            </LandingPageLayout>
           }
         />
 
