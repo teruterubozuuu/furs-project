@@ -9,6 +9,10 @@ import AppLayout from "../pages/layout/AppLayout";
 import Profile from "../pages/app/Profile";
 import Heatmap from "../pages/app/Heatmap";
 import LandingPage from "../pages/landingpage/LandingPage";
+import AdminLayout from "../pages/layout/AdminLayout";
+import Dashboard from "../pages/admin/Dashboard";
+import User from "../pages/admin/User";
+import ForgotPassword from "../pages/ForgotPassword";
 
 function AppRoutes() {
   return (
@@ -20,12 +24,12 @@ function AppRoutes() {
           element={
             <RedirectIfAuthenticated>
               <LandingPageLayout>
-                <LandingPage/>
+                <LandingPage />
               </LandingPageLayout>
             </RedirectIfAuthenticated>
           }
         />
-        
+
         <Route
           path="/login"
           element={
@@ -47,6 +51,15 @@ function AppRoutes() {
           }
         />
 
+        <Route
+          path="/forgotpassword"
+          element={
+            <LandingPageLayout>
+              <ForgotPassword/>
+            </LandingPageLayout>
+          }
+        />
+
         {/* Route for App - Home, Heatmap, Add Post, Adoption Listings, Profile */}
         <Route
           path="/home"
@@ -64,13 +77,24 @@ function AppRoutes() {
           element={
             <RequireAuth>
               <AppLayout>
-                <Profile/>
+                <Profile />
               </AppLayout>
             </RequireAuth>
           }
         />
 
-       <Route
+        <Route
+          path="/profile/:userId" // <-- This colon (:) is essential!
+          element={
+            <RequireAuth>
+              <AppLayout>
+                <Profile />
+              </AppLayout>
+            </RequireAuth>
+          }
+        />
+
+        <Route
           path="/heatmap"
           element={
             <RequireAuth>
@@ -81,6 +105,28 @@ function AppRoutes() {
           }
         />
 
+        {/*Route for Admin Layout*/}
+        <Route
+          path="/admin/dashboard"
+          element={
+            <RequireAuth>
+              <AdminLayout>
+                <Dashboard />
+              </AdminLayout>
+            </RequireAuth>
+          }
+        />
+
+                <Route
+          path="/admin/users"
+          element={
+            <RequireAuth>
+              <AdminLayout>
+                <User/>
+              </AdminLayout>
+            </RequireAuth>
+          }
+        />
       </Routes>
     </>
   );
