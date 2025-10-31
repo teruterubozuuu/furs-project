@@ -52,6 +52,17 @@ export default function Home() {
     username: user?.displayName || "Guest",
   });
 
+  // inside Home component
+  const [filters, setFilters] = useState({
+    reportType: "",
+    selectedColors: [],
+  });
+
+  // 🔹 Handle when user applies filter
+  const handleApplyFilter = ({ reportType, selectedColors }) => {
+    setFilters({ reportType, selectedColors });
+  };
+
   // ------------------------------------------
   // 🚨 1. FETCH CURRENT USER PROFILE DATA
   // This runs once to load the latest photo/username.
@@ -239,7 +250,11 @@ export default function Home() {
         </div>
       </div>
 
-      <Filter isOpen={isOpenFilter} onClose={() => setIsOpenFilter(false)} />
+      <Filter
+        isOpen={isOpenFilter}
+        onClose={() => setIsOpenFilter(false)}
+        onApply={handleApplyFilter}
+      />
       <AddPost isOpen={isOpenPost} onClose={() => setIsOpenPost(false)} />
 
       {/*POST*/}
@@ -247,175 +262,196 @@ export default function Home() {
         <div className="flex justify-center py-10 xl:w-[700px]">
           <OrbitProgress color="#2e7d32" size="large" />
         </div>
-      ) : posts.length === 0 ? (
-        <div className="flex w-[650px] justify-center text-gray-500 italic font-medium text-xl mt-5">
-          <p>No posts yet...</p>
-        </div>
       ) : (
-        posts.map((post) => {
-          const profilePath =
-            post.userId === user?.uid ? "/profile" : `/profile/${post.userId}`;
+        (() => {
+          // Filter logic
+          const filteredPosts = posts.filter((post) => {
+            const matchesReportType =
+              !filters.reportType || post.status === filters.reportType;
 
-          const isOwner = user?.uid === post.userId;
+            const matchesColor =
+              filters.selectedColors.length === 0 ||
+              filters.selectedColors.includes(post.coatColor);
 
-          return (
-            <div
-              key={post.id}
-              className=" bg-[#fafafa] border border-gray-200 shadow-sm p-5 rounded-lg text-sm"
-            >
-              {/* Post header */}
-              <div className="border-b border-gray-200">
-                <div className="flex justify-between items-start pb-2">
-                  <div className="flex h-full items-center">
-                    {/* 🚨 FIX: Post Avatar */}
-                    <img
-                      src={
-                        isOwner
-                          ? currentUserProfile.photoURL
-                          : post.userPhoto || defaultImg
-                      }
-                      alt="Profile"
-                      className="w-14 h-14 rounded-full object-cover"
-                    />
+            return matchesReportType && matchesColor;
+          });
 
-                    <div className="pl-2">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <Link
-                          to={profilePath}
-                          className="text-base font-semibold hover:underline cursor-pointer"
-                        >
-                          {/* 🚨 FIX: Post Username */}
-                          {isOwner
-                            ? currentUserProfile.username
-                            : post.username}
-                        </Link>
-                        <p className="text-[11px] text-gray-600">
-                          {post.createdAt?.toDate
-                            ? post.createdAt.toDate().toLocaleString("en-US", {
-                                year: "numeric",
-                                month: "short",
-                                day: "numeric",
-                                hour: "numeric",
-                                minute: "2-digit",
-                                hour12: true,
-                              })
-                            : "Just now"}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span
-                          className={`text-xs p-1 border rounded-sm ${
-                            post.status === "Stray Animal"
-                              ? "bg-red-100 text-red-700 border-red-300"
-                              : post.status === "Lost Pet"
-                              ? "bg-yellow-100 text-yellow-700 border-yellow-300"
-                              : "bg-gray-100 text-gray-700 border-gray-300"
-                          }`}
-                        >
-                          {post.status}
-                        </span>
-                        {/* Dog characteristics */}
-                        <div className="flex py-1 gap-2">
-                          <span className="text-xs p-1 border bg-green-100 text-green-700 border-green-300 rounded-sm">
-                            {post.coatColor}
+          if (filteredPosts.length === 0) {
+            return (
+              <div className="flex w-[650px] justify-center text-gray-500 italic font-medium text-xl mt-5">
+                <p>No matching posts...</p>
+              </div>
+            );
+          }
+
+          return filteredPosts.map((post) => {
+            const profilePath =
+              post.userId === user?.uid
+                ? "/profile"
+                : `/profile/${post.userId}`;
+            const isOwner = user?.uid === post.userId;
+
+            return (
+              <div
+                key={post.id}
+                className=" bg-[#fafafa] border border-gray-200 shadow-sm p-5 rounded-lg text-sm"
+              >
+                {/* Post header */}
+                <div className="border-b border-gray-200">
+                  <div className="flex justify-between items-start pb-2">
+                    <div className="flex h-full items-center">
+                      {/* 🚨 FIX: Post Avatar */}
+                      <img
+                        src={
+                          isOwner
+                            ? currentUserProfile.photoURL
+                            : post.userPhoto || defaultImg
+                        }
+                        alt="Profile"
+                        className="w-14 h-14 rounded-full object-cover"
+                      />
+
+                      <div className="pl-2">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <Link
+                            to={profilePath}
+                            className="text-base font-semibold hover:underline cursor-pointer"
+                          >
+                            {/* 🚨 FIX: Post Username */}
+                            {isOwner
+                              ? currentUserProfile.username
+                              : post.username}
+                          </Link>
+                          <p className="text-[11px] text-gray-600">
+                            {post.createdAt?.toDate
+                              ? post.createdAt
+                                  .toDate()
+                                  .toLocaleString("en-US", {
+                                    year: "numeric",
+                                    month: "short",
+                                    day: "numeric",
+                                    hour: "numeric",
+                                    minute: "2-digit",
+                                    hour12: true,
+                                  })
+                              : "Just now"}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span
+                            className={`text-xs p-1 border rounded-sm ${
+                              post.status === "Stray Animal"
+                                ? "bg-red-100 text-red-700 border-red-300"
+                                : post.status === "Lost Pet"
+                                ? "bg-yellow-100 text-yellow-700 border-yellow-300"
+                                : "bg-gray-100 text-gray-700 border-gray-300"
+                            }`}
+                          >
+                            {post.status}
                           </span>
-
-                          {post.breed && (
+                          {/* Dog characteristics */}
+                          <div className="flex py-1 gap-2">
                             <span className="text-xs p-1 border bg-green-100 text-green-700 border-green-300 rounded-sm">
-                              {post.breed}
+                              {post.coatColor}
                             </span>
-                          )}
+
+                            {post.breed && (
+                              <span className="text-xs p-1 border bg-green-100 text-green-700 border-green-300 rounded-sm">
+                                {post.breed}
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
 
-                  {/* Edit/Delete Buttons */}
-                  <div>
-                    {isOwner && (
-                      <div className="relative flex flex-col items-end">
-                        {/* Post Menu */}
+                    {/* Edit/Delete Buttons */}
+                    <div>
+                      {isOwner && (
                         <div className="relative flex flex-col items-end">
-                          {/* Post Menu Button */}
-                          <i
-                            onClick={() =>
-                              setOpenMenuId(
-                                openMenuId === post.id ? null : post.id
-                              )
-                            }
-                            className="cursor-pointer bi bi-three-dots text-gray-500 hover:text-gray-700 font-medium transition duration-150 ease-in-out text-lg flex justify-end"
-                          ></i>
+                          {/* Post Menu */}
+                          <div className="relative flex flex-col items-end">
+                            {/* Post Menu Button */}
+                            <i
+                              onClick={() =>
+                                setOpenMenuId(
+                                  openMenuId === post.id ? null : post.id
+                                )
+                              }
+                              className="cursor-pointer bi bi-three-dots text-gray-500 hover:text-gray-700 font-medium transition duration-150 ease-in-out text-lg flex justify-end"
+                            ></i>
 
-                          {/* Dropdown Menu */}
-                          {openMenuId === post.id && (
-                            <div className="flex flex-col items-start border border-gray-200 bg-white w-[80px] rounded-md absolute top-5 right-0 z-10 shadow-sm">
-                              <button
-                                onClick={() => {
-                                  handleEditPost(post);
-                                  setOpenMenuId(null);
-                                }}
-                                className="cursor-pointer text-xs text-start pl-3 text-gray-600 w-full hover:bg-gray-200 transition duration-150 ease-in-out py-2"
-                              >
-                                Edit
-                              </button>
-                              <button
-                                onClick={() => {
-                                  handleDeletePost(post.id, post.type);
-                                  setOpenMenuId(null);
-                                }}
-                                className="cursor-pointer text-xs text-start pl-3 text-gray-600 w-full hover:bg-gray-200 transition duration-150 ease-in-out py-2"
-                              >
-                                Delete
-                              </button>
-                            </div>
-                          )}
+                            {/* Dropdown Menu */}
+                            {openMenuId === post.id && (
+                              <div className="flex flex-col items-start border border-gray-200 bg-white w-[80px] rounded-md absolute top-5 right-0 z-10 shadow-sm">
+                                <button
+                                  onClick={() => {
+                                    handleEditPost(post);
+                                    setOpenMenuId(null);
+                                  }}
+                                  className="cursor-pointer text-xs text-start pl-3 text-gray-600 w-full hover:bg-gray-200 transition duration-150 ease-in-out py-2"
+                                >
+                                  Edit
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    handleDeletePost(post.id, post.type);
+                                    setOpenMenuId(null);
+                                  }}
+                                  className="cursor-pointer text-xs text-start pl-3 text-gray-600 w-full hover:bg-gray-200 transition duration-150 ease-in-out py-2"
+                                >
+                                  Delete
+                                </button>
+                              </div>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    )}
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Description */}
+                  <p>{post.description}</p>
+
+                  {/* Photo */}
+                  <div className="flex justify-center p-3">
+                    <img
+                      src={post.photoURL}
+                      alt="Posted"
+                      className="w-100 rounded-sm"
+                    />
+                  </div>
+
+                  {/* Location */}
+                  <div className="py-1 italic text-gray-400 text-sm">
+                    {post.address
+                      ? post.address
+                      : post.location
+                      ? `Latitude: ${post.location.lat.toFixed(
+                          5
+                        )}, Longitude: ${post.location.lng.toFixed(5)}`
+                      : "Location not available"}
                   </div>
                 </div>
 
-                {/* Description */}
-                <p>{post.description}</p>
-
-                {/* Photo */}
-                <div className="flex justify-center p-3">
-                  <img
-                    src={post.photoURL}
-                    alt="Posted"
-                    className="w-100 rounded-sm"
-                  />
-                </div>
-
-                {/* Location */}
-                <div className="py-1 italic text-gray-400 text-sm">
-                  {post.address
-                    ? post.address
-                    : post.location
-                    ? `Latitude: ${post.location.lat.toFixed(
-                        5
-                      )}, Longitude: ${post.location.lng.toFixed(5)}`
-                    : "Location not available"}
+                <div className="flex flex-1 justify-between xl:justify-around px-2 pt-3 text-sm text-gray-500 font-medium">
+                  <div className="flex items-center gap-2">
+                    <i className="bi bi-hand-thumbs-up"></i>
+                    <p>Like</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <i className="bi bi-chat"></i>
+                    <p>Comment</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <i className="bi bi-arrow-90deg-right"></i>
+                    <p>Repost</p>
+                  </div>
                 </div>
               </div>
-
-              <div className="flex flex-1 justify-between xl:justify-around px-2 pt-3 text-sm text-gray-500 font-medium">
-                <div className="flex items-center gap-2">
-                  <i className="bi bi-hand-thumbs-up"></i>
-                  <p>Like</p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <i className="bi bi-chat"></i>
-                  <p>Comment</p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <i className="bi bi-arrow-90deg-right"></i>
-                  <p>Repost</p>
-                </div>
-              </div>
-            </div>
-          );
-        })
+            );
+          });
+        })()
       )}
     </div>
   );
