@@ -11,13 +11,11 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     const initializeAuth = async () => {
       try {
-        // 🔍 Handle Google redirect user if it exists
         const result = await getRedirectResult(auth);
         if (result?.user) {
           setUser(result.user);
         }
 
-        // 🔁 Always listen for ongoing auth state changes
         const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
           console.log("Auth state changed:", currentUser);
           setUser(currentUser);

@@ -31,11 +31,10 @@ export default function RegisterPage() {
         email: email,
         userType: "Community Volunteer",
 
-        // 🚨 NEW FIELDS: PROFILE INITIALIZATION
-        profilePhoto: "", // Start with an empty string; the defaultImg will be used by Profile.jsx if this is empty
+
+        profilePhoto: "", 
         description: "Add a description...",
 
-        // 🚨 NEW FIELDS: RATING SYSTEM INITIALIZATION
         totalRatingSum: 0,
         totalRatingCount: 0,
       });

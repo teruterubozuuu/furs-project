@@ -19,23 +19,18 @@ export default function LeftSideBar() {
     role: user?.userType
   });
 
-  // ------------------------------------------
-  // 🚨 1. FETCH CURRENT USER PROFILE DATA
-  // This runs once to load the latest photo/username.
-  // ------------------------------------------
+  // 1. FETCH CURRENT USER PROFILE DATA
+
   useEffect(() => {
     const fetchUserProfile = async () => {
       if (!user?.uid) return;
 
       try {
-        // Fetch user document from the 'users' collection
         const userDoc = await getDoc(doc(db, "users", user.uid));
         if (userDoc.exists()) {
           const data = userDoc.data();
           setCurrentUserProfile({
-            // Prioritize profilePhoto from Firestore, fall back to default
             photoURL: data.profilePhoto || defaultImg,
-            // Prioritize username from Firestore, fall back to Auth display name
           });
                       setUsername(data.username || user.displayName);
           setRole(data.userType || "");
@@ -51,7 +46,7 @@ export default function LeftSideBar() {
     };
 
     fetchUserProfile();
-  }, [user]); // Reruns when the user object initializes
+  }, [user]); 
 
   return (
     <div className="h-full  hidden xl:flex xl:flex-col xl:w-full ">

@@ -1,10 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
-// CORRECT IMPORT 1: Import the initialized database instance
 import { db } from "../../firebase/config";
-
-// 🚨 CORRECT IMPORT 2: Import all necessary functions directly from the Firebase SDK.
 import {
   collection,
   query,
@@ -13,10 +10,7 @@ import {
   getDoc,
   deleteDoc,
   updateDoc,
-  onSnapshot, // for real-time updates
-  // 🚨 FIX: These specialized methods must be imported from the SDK
-  arrayUnion,
-  arrayRemove,
+  onSnapshot,
 } from "firebase/firestore";
 
 import AddPost from "./components/AddPost";
@@ -25,12 +19,11 @@ import defaultImg from "../../assets/default_img.jpg";
 import { OrbitProgress } from "react-loading-indicators";
 import Filter from "./components/Filter";
 
-// Helper function to determine the Firestore collection name based on post type
+
 const getCollectionName = (postType) => {
   if (postType === "Stray Animal") return "stray_animal_posts";
   if (postType === "Lost Pet") return "lost_pet_posts";
   if (postType === "Unknown") return "unknown_status";
-  // fallback for general posts collection to match AddPost.jsx
   return "posts";
 };
 
@@ -46,40 +39,36 @@ export default function Home() {
   const [isEditing, setIsEditing] = useState(false);
   const [postToEdit, setPostToEdit] = useState(null);
 
-  // 🚨 NEW STATE: To hold the logged-in user's current profile data
+
   const [currentUserProfile, setCurrentUserProfile] = useState({
     photoURL: defaultImg,
     username: user?.displayName || "Guest",
   });
 
-  // inside Home component
+
   const [filters, setFilters] = useState({
     reportType: "",
     selectedColors: [],
   });
 
-  // 🔹 Handle when user applies filter
+
   const handleApplyFilter = ({ reportType, selectedColors }) => {
     setFilters({ reportType, selectedColors });
   };
 
-  // ------------------------------------------
-  // 🚨 1. FETCH CURRENT USER PROFILE DATA
-  // This runs once to load the latest photo/username.
-  // ------------------------------------------
+
+  // 1. FETCH CURRENT USER PROFILE DATA
   useEffect(() => {
     const fetchUserProfile = async () => {
       if (!user?.uid) return;
 
       try {
-        // Fetch user document from the 'users' collection
+
         const userDoc = await getDoc(doc(db, "users", user.uid));
         if (userDoc.exists()) {
           const data = userDoc.data();
           setCurrentUserProfile({
-            // Prioritize profilePhoto from Firestore, fall back to default
             photoURL: data.profilePhoto || defaultImg,
-            // Prioritize username from Firestore, fall back to Auth display name
             username: data.username || user.displayName,
           });
         }
@@ -89,11 +78,9 @@ export default function Home() {
     };
 
     fetchUserProfile();
-  }, [user]); // Reruns when the user object initializes
+  }, [user]); 
 
-  // ------------------------------------------
   // 2. EDIT/UPDATE FUNCTIONALITY
-  // ------------------------------------------
   const handleEditPost = (post) => {
     setPostToEdit(post);
     setIsEditing(true);
@@ -110,7 +97,6 @@ export default function Home() {
       const postRef = doc(db, collectionName, postId);
       await updateDoc(postRef, updatedData);
 
-      // Update the local state (UI) immediately
       setPosts((prevPosts) =>
         prevPosts.map((post) =>
           post.id === postId ? { ...post, ...updatedData } : post
@@ -123,9 +109,8 @@ export default function Home() {
     }
   };
 
-  // ------------------------------------------
+
   // 3. DELETE FUNCTIONALITY
-  // ------------------------------------------
   const handleDeletePost = async (postId, postType) => {
     if (!window.confirm("Are you sure you want to delete this post?")) {
       return;
@@ -141,7 +126,7 @@ export default function Home() {
       const postRef = doc(db, collectionName, postId);
       await deleteDoc(postRef);
 
-      // Update the local state (UI)
+
       setPosts((prevPosts) => prevPosts.filter((post) => post.id !== postId));
       console.log(
         `Post ${postId} deleted successfully from ${collectionName}.`
@@ -152,13 +137,11 @@ export default function Home() {
     }
   };
 
-  // ------------------------------------------
-  // 4. FETCH ALL POSTS (FEED CONTENT) - NOW REAL-TIME
-  // ------------------------------------------
+
+  // 4. FETCH ALL POSTS (FEED CONTENT) 
   useEffect(() => {
     setIsLoading(true);
 
-    // include the "posts" collection where AddPost.jsx saves
     const postsRef = collection(db, "posts");
 
     const unsubPosts = onSnapshot(
@@ -166,15 +149,12 @@ export default function Home() {
       (snapshot) => handleSnapshot(snapshot, "General")
     );
 
-    // Cleanup listeners
     return () => {
       unsubPosts();
     };
   }, []);
 
-  // ------------------------------------------
   // 5. HELPER: Handle snapshot updates
-  // ------------------------------------------
   const handleSnapshot = async (snapshot, type) => {
     const newPosts = await Promise.all(
       snapshot.docs.map(async (docSnap) => {
