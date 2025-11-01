@@ -19,6 +19,7 @@
     "bootstrap-icons": "^1.13.1",
     "firebase": "^11.9.1",
     "firebase-admin": "^13.5.0",
+    "fuse.js": "^7.1.0",
     "leaflet": "^1.9.4",
     "leaflet.heat": "^0.2.0",
     "react": "^19.1.0",
