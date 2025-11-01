@@ -1,6 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { MapContainer, TileLayer, Marker, useMap, useMapEvents } from "react-leaflet";
 import L from "leaflet";
+import Fuse from "fuse.js";
 import "leaflet/dist/leaflet.css";
 
 const markerIcon = new L.Icon({
@@ -12,7 +13,7 @@ const markerIcon = new L.Icon({
 function RecenterMap({ position }) {
   const map = useMap();
   useEffect(() => {
-    if (position) map.setView(position, 16, { animate: true }); 
+    if (position) map.setView(position, 16, { animate: true });
   }, [position]);
   return null;
 }
@@ -33,15 +34,46 @@ export default function SelectLocation({ onClose, onSelect }) {
   const [position, setPosition] = useState(null);
   const [manualInput, setManualInput] = useState("");
   const [canPin, setCanPin] = useState(false);
-  const [loadingType, setLoadingType] = useState(""); 
+  const [loadingType, setLoadingType] = useState("");
   const [loadingMsg, setLoadingMsg] = useState("");
+  const [suggestions, setSuggestions] = useState([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
 
-  const showToast = (msg) => alert(msg); 
+  const abortControllerRef = useRef(null);
+  const debounceRef = useRef(null);
+  const toastShownRef = useRef({ current: false, search: false });
 
-  // handles current location
+  const showToast = (msg, type = "current") => {
+    if (!toastShownRef.current[type]) {
+      alert(msg);
+      toastShownRef.current[type] = true;
+      setTimeout(() => {
+        toastShownRef.current[type] = false;
+      }, 2000);
+    }
+  };
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (!event.target.closest("input") && !event.target.closest("ul")) {
+        setShowSuggestions(false);
+      }
+    };
+    document.addEventListener("click", handleClickOutside);
+    return () => document.removeEventListener("click", handleClickOutside);
+  }, []);
+
+  // automatically gets the user's location when the map opens
+  useEffect(() => {
+    if (!position) {
+      handleCurrent();
+    }
+  }, []);
+
+  // handles the current location
   const handleCurrent = () => {
     if (!navigator.geolocation) {
-      showToast("Geolocation not supported by your browser.");
+      showToast("Geolocation is not supported by your browser.");
       return;
     }
 
@@ -57,7 +89,7 @@ export default function SelectLocation({ onClose, onSelect }) {
 
     const timeout = setTimeout(() => {
       if (!hasShownToast) {
-        showToast("Unable to retrieve your location.");
+        showToast("Unable to retrieve your location.", "current");
         hasShownToast = true;
       }
       setLoadingType("");
@@ -72,20 +104,77 @@ export default function SelectLocation({ onClose, onSelect }) {
         setPosition(coords);
         setLoadingType("");
         setLoadingMsg("");
+        showToast("Current location detected!", "current");
       },
       (err) => {
         clearTimeout(delayMsg);
         clearTimeout(timeout);
+
+        let message = "";
+        if (err.code === err.PERMISSION_DENIED) {
+          message = "Location permission denied. Please enable location access in your browser settings.";
+        } else if (err.code === err.POSITION_UNAVAILABLE) {
+          message = "Location information is unavailable. Please check your internet or GPS.";
+        } else if (err.code === err.TIMEOUT) {
+          message = "Request timed out. Please try again.";
+        } else {
+          message = "An unknown error occurred while retrieving your location.";
+        }
+
         if (!hasShownToast) {
-          showToast("Unable to retrieve your location.");
+          showToast(message, "current");
           hasShownToast = true;
         }
+
         console.error(err);
         setLoadingType("");
         setLoadingMsg("");
       },
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
     );
+  };
+
+  // fetches location suggestions as the user types (with fuzzy matching)
+  const fetchSuggestions = (query) => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+
+    debounceRef.current = setTimeout(async () => {
+      if (!query.trim()) {
+        setSuggestions([]);
+        return;
+      }
+
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+
+      const controller = new AbortController();
+      abortControllerRef.current = controller;
+
+      try {
+        const response = await fetch(
+          `https://nominatim.openstreetmap.org/search?format=json&q=${query}&addressdetails=1&limit=10`,
+          { signal: controller.signal }
+        );
+        const data = await response.json();
+
+        // appplied fuzzy matching
+        const fuse = new Fuse(data, {
+          keys: ["display_name"],
+          threshold: 0.4, // 0 = exact match, 1 = match anything
+        });
+
+        const results = fuse.search(query);
+        const finalResults = results.length > 0 ? results.map(r => r.item) : data;
+
+        setSuggestions(finalResults.slice(0, 5));
+        setShowSuggestions(true);
+      } catch (err) {
+        if (err.name !== "AbortError") {
+          console.error("Error fetching suggestions:", err);
+        }
+      }
+    }, 400); // waitss for 400ms after typing stops
   };
 
   // handles manual search
@@ -104,7 +193,7 @@ export default function SelectLocation({ onClose, onSelect }) {
 
     const timeout = setTimeout(() => {
       if (!hasShownToast) {
-        showToast("Search timed out. Please try again.");
+        showToast("Search timed out. Please try again.", "search");
         hasShownToast = true;
       }
       setLoadingType("");
@@ -126,16 +215,17 @@ export default function SelectLocation({ onClose, onSelect }) {
           lng: parseFloat(data[0].lon),
         };
         setPosition(found);
+        showToast("Location pinned from search!", "search");
       } else {
         if (!hasShownToast) {
-          showToast("No results found for that location.");
+          showToast("No results found for that location.", "search");
           hasShownToast = true;
         }
       }
     } catch (err) {
       console.error(err);
       if (!hasShownToast) {
-        showToast("Error fetching location data.");
+        showToast("Error fetching location data.", "search");
         hasShownToast = true;
       }
     } finally {
@@ -146,7 +236,7 @@ export default function SelectLocation({ onClose, onSelect }) {
     }
   };
 
-  // enables pinning mode 
+  // enables pinning mode
   const enablePinMode = () => {
     setCanPin(true);
   };
@@ -175,20 +265,22 @@ export default function SelectLocation({ onClose, onSelect }) {
           <button
             onClick={handleCurrent}
             disabled={isLoading}
-            className={`${
-              loadingType === "current" ? "bg-green-400" : "bg-green-600 hover:bg-green-700"
-            } text-white px-3 py-2 rounded-lg transition flex items-center gap-1`}
+            className={`${loadingType === "current"
+                ? "bg-green-400"
+                : "bg-green-600 hover:bg-green-700"
+              } text-white px-3 py-2 rounded-lg transition flex items-center gap-1`}
           >
             <i className="bi bi-crosshair"></i>
-            {loadingType === "current" ? "Locating current location…" : "Use Current"}
+            {loadingType === "current"
+              ? "Locating current location…"
+              : "Use Current"}
           </button>
 
           <button
             onClick={enablePinMode}
             disabled={isLoading}
-            className={`${
-              canPin ? "bg-yellow-600" : "bg-yellow-500 hover:bg-yellow-600"
-            } text-white px-3 py-2 rounded-lg transition flex items-center gap-1`}
+            className={`${canPin ? "bg-yellow-600" : "bg-yellow-500 hover:bg-yellow-600"
+              } text-white px-3 py-2 rounded-lg transition flex items-center gap-1`}
           >
             <i className="bi bi-geo"></i>
             {canPin ? "Pinning Active" : "Pin on Map"}
@@ -200,21 +292,46 @@ export default function SelectLocation({ onClose, onSelect }) {
           <input
             type="text"
             value={manualInput}
-            onChange={(e) => setManualInput(e.target.value)}
+            onChange={(e) => {
+              const val = e.target.value;
+              setManualInput(val);
+              fetchSuggestions(val);
+            }}
             placeholder="Type location (e.g., Kamuning Road)"
             className="border flex-1 rounded-lg px-3 py-2 focus:outline-none focus:ring focus:ring-green-200 text-sm"
           />
           <button
             onClick={handleSearch}
             disabled={isLoading}
-            className={`${
-              loadingType === "search" ? "bg-blue-400" : "bg-blue-600 hover:bg-blue-700"
-            } text-white px-3 py-2 rounded-lg transition text-sm flex items-center gap-1`}
+            className={`${loadingType === "search"
+                ? "bg-blue-400"
+                : "bg-blue-600 hover:bg-blue-700"
+              } text-white px-3 py-2 rounded-lg transition text-sm flex items-center gap-1`}
           >
             <i className="bi bi-search"></i>
             {loadingType === "search" ? "Searching…" : "Search"}
           </button>
         </div>
+
+        {showSuggestions && suggestions.length > 0 && (
+          <ul className="border border-gray-200 rounded-lg bg-white shadow-sm max-h-40 overflow-y-auto mb-3">
+            {suggestions.map((s, i) => (
+              <li
+                key={i}
+                onClick={() => {
+                  const coords = { lat: parseFloat(s.lat), lng: parseFloat(s.lon) };
+                  setPosition(coords);
+                  setManualInput(s.display_name);
+                  setSuggestions([]);
+                  setShowSuggestions(false);
+                }}
+                className="px-3 py-2 text-sm hover:bg-green-100 cursor-pointer transition"
+              >
+                {s.display_name}
+              </li>
+            ))}
+          </ul>
+        )}
 
         {/* map */}
         <div className="h-60 mb-4 rounded-lg overflow-hidden border border-gray-200 relative">
@@ -225,14 +342,18 @@ export default function SelectLocation({ onClose, onSelect }) {
             </div>
           )}
           <MapContainer
-            center={position || [14.629508, 121.041873]} // default to CIIT if no position
+            center={position || [14.629508, 121.041873]}
             zoom={16}
             className="h-full w-full rounded-lg"
           >
             <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
             {position && <Marker position={position} icon={markerIcon} />}
             <RecenterMap position={position} />
-            <LocationMarker setPosition={setPosition} canPin={canPin} setCanPin={setCanPin} />
+            <LocationMarker
+              setPosition={setPosition}
+              canPin={canPin}
+              setCanPin={setCanPin}
+            />
           </MapContainer>
         </div>
 
@@ -247,7 +368,7 @@ export default function SelectLocation({ onClose, onSelect }) {
           <button
             onClick={() => {
               if (!position) {
-                showToast("Please select a location first.");
+                showToast("Please select a location first.", "confirm");
                 return;
               }
               onSelect(position);
