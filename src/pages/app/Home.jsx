@@ -11,6 +11,8 @@ import {
   deleteDoc,
   updateDoc,
   onSnapshot,
+  increment,
+  setDoc,
 } from "firebase/firestore";
 
 import AddPost from "./components/AddPost";
@@ -18,7 +20,6 @@ import EditPostModal from "./components/EditPostModal";
 import defaultImg from "../../assets/default_img.jpg";
 import { OrbitProgress } from "react-loading-indicators";
 import Filter from "./components/Filter";
-
 
 const getCollectionName = (postType) => {
   if (postType === "Stray Animal") return "stray_animal_posts";
@@ -33,29 +34,64 @@ export default function Home() {
   const [isOpenFilter, setIsOpenFilter] = useState(false);
   const [posts, setPosts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [postMenu, setPostMenu] = useState(false);
   const [openMenuId, setOpenMenuId] = useState(null);
-
   const [isEditing, setIsEditing] = useState(false);
   const [postToEdit, setPostToEdit] = useState(null);
-
 
   const [currentUserProfile, setCurrentUserProfile] = useState({
     photoURL: defaultImg,
     username: user?.displayName || "Guest",
   });
 
-
   const [filters, setFilters] = useState({
     reportType: "",
     selectedColors: [],
   });
 
+  const handleLike = async (postId, postType) => {
+    if (!user) {
+      alert("Please log in to like posts.");
+      return;
+    }
+
+    const collectionName = getCollectionName(postType);
+    const postRef = doc(db, collectionName, postId);
+    const likeRef = doc(db, collectionName, postId, "likes", user.uid);
+
+    try {
+      const likeSnap = await getDoc(likeRef);
+
+      if (likeSnap.exists()) {
+        await deleteDoc(likeRef);
+        await updateDoc(postRef, { likes: increment(-1) });
+
+        setPosts((prev) =>
+          prev.map((p) =>
+            p.id === postId
+              ? { ...p, likes: (p.likes || 1) - 1, isLikedByUser: false }
+              : p
+          )
+        );
+      } else {
+        await setDoc(likeRef, { userId: user.uid, timestamp: new Date() });
+        await updateDoc(postRef, { likes: increment(1) });
+
+        setPosts((prev) =>
+          prev.map((p) =>
+            p.id === postId
+              ? { ...p, likes: (p.likes || 0) + 1, isLikedByUser: true }
+              : p
+          )
+        );
+      }
+    } catch (error) {
+      console.error("Error toggling like:", error);
+    }
+  };
 
   const handleApplyFilter = ({ reportType, selectedColors }) => {
     setFilters({ reportType, selectedColors });
   };
-
 
   // 1. FETCH CURRENT USER PROFILE DATA
   useEffect(() => {
@@ -63,7 +99,6 @@ export default function Home() {
       if (!user?.uid) return;
 
       try {
-
         const userDoc = await getDoc(doc(db, "users", user.uid));
         if (userDoc.exists()) {
           const data = userDoc.data();
@@ -78,7 +113,7 @@ export default function Home() {
     };
 
     fetchUserProfile();
-  }, [user]); 
+  }, [user]);
 
   // 2. EDIT/UPDATE FUNCTIONALITY
   const handleEditPost = (post) => {
@@ -109,7 +144,6 @@ export default function Home() {
     }
   };
 
-
   // 3. DELETE FUNCTIONALITY
   const handleDeletePost = async (postId, postType) => {
     if (!window.confirm("Are you sure you want to delete this post?")) {
@@ -126,7 +160,6 @@ export default function Home() {
       const postRef = doc(db, collectionName, postId);
       await deleteDoc(postRef);
 
-
       setPosts((prevPosts) => prevPosts.filter((post) => post.id !== postId));
       console.log(
         `Post ${postId} deleted successfully from ${collectionName}.`
@@ -137,8 +170,7 @@ export default function Home() {
     }
   };
 
-
-  // 4. FETCH ALL POSTS (FEED CONTENT) 
+  // 4. FETCH ALL POSTS (FEED CONTENT)
   useEffect(() => {
     setIsLoading(true);
 
@@ -159,23 +191,35 @@ export default function Home() {
     const newPosts = await Promise.all(
       snapshot.docs.map(async (docSnap) => {
         const data = docSnap.data();
+        let isLikedByUser = false;
+
+        if (user?.uid) {
+          const likeRef = doc(db, "posts", docSnap.id, "likes", user.uid);
+          const likeSnap = await getDoc(likeRef);
+          isLikedByUser = likeSnap.exists();
+        }
+
+        let address = "No coordinates";
+
         if (data.location?.lat && data.location?.lng) {
           try {
             const res = await fetch(
               `https://nominatim.openstreetmap.org/reverse?lat=${data.location.lat}&lon=${data.location.lng}&format=json&accept-language=en`
             );
             const json = await res.json();
-            return {
-              id: docSnap.id,
-              ...data,
-              type,
-              address: json.display_name || "Address not found",
-            };
+            address = json.display_name || "Address not found";
           } catch {
-            return { id: docSnap.id, ...data, type, address: "Address error" };
+            address = "Address error";
           }
         }
-        return { id: docSnap.id, ...data, type, address: "No coordinates" };
+
+        return {
+          id: docSnap.id,
+          ...data,
+          type,
+          address,
+          isLikedByUser,
+        };
       })
     );
 
@@ -247,7 +291,9 @@ export default function Home() {
           // Filter logic
           const filteredPosts = posts.filter((post) => {
             const matchesReportType =
-              !filters.reportType || post.status === filters.reportType;
+              !filters.reportType ||
+              filters.reportType === "All" ||
+              post.status === filters.reportType;
 
             const matchesColor =
               filters.selectedColors.length === 0 ||
@@ -414,18 +460,34 @@ export default function Home() {
                   </div>
                 </div>
 
-                <div className="flex flex-1 justify-between xl:justify-around px-2 pt-3 text-sm text-gray-500 font-medium">
-                  <div className="flex items-center gap-2">
-                    <i className="bi bi-hand-thumbs-up"></i>
-                    <p>Like</p>
-                  </div>
+                <div className="flex flex-1 justify-between xl:justify-around px-2 pt-3 text-md text-gray-500 font-medium">
+                  <button
+                    onClick={() => handleLike(post.id, post.type)}
+                    className="group cursor-pointer flex items-center gap-1 "
+                  >
+                    <i
+                      className={`bi ${
+                        post.isLikedByUser
+                          ? "bi-hand-thumbs-up-fill text-[#fbc02d]"
+                          : "bi-hand-thumbs-up text-gray-500 group-hover:text-[#fbc02d] transition-all ease-in"
+                      }`}
+                    ></i>
+                    <span
+                      className={`ml-2 font-medium  ${
+                        post.isLikedByUser ? "text-[#fbc02d]" : "text-gray-500 group-hover:text-[#fbc02d] transition-all ease-in"
+                      }`}
+                    >
+                      {post.likes > 0 ? post.likes : "Like"}
+                    </span>
+                  </button>
+
                   <div className="flex items-center gap-2">
                     <i className="bi bi-chat"></i>
-                    <p>Comment</p>
+                    <span>Comment</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <i className="bi bi-arrow-90deg-right"></i>
-                    <p>Repost</p>
+                    <i class="bi bi-star-half"></i>
+                    <span>Rate</span>
                   </div>
                 </div>
               </div>

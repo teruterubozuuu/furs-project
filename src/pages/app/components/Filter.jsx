@@ -38,7 +38,7 @@ export default function Filter({ isOpen, onClose, onApply }) {
           <section>
             <p className="font-medium">Report Status</p>
             <div className="flex flex-col gap-2 mt-2">
-              {["Stray Animal", "Lost Pet", "Unknown"].map((status) => (
+              {["Stray Animal", "Lost Pet", "Unknown", "All"].map((status) => (
                 <label key={status} className="flex gap-1">
                   <input
                     type="radio"
