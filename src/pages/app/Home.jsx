@@ -249,7 +249,6 @@ export default function Home() {
       <div className=" flex justify-between items-stretch gap-2 max-w-[700px] w-full">
         <div className="flex-1 flex flex-wrap sm:flex-nowrap items-center gap-3 px-4 rounded-lg border border-gray-200 shadow-sm bg-[#fafafa]">
           <img
-            // 🚨 UPDATED: Use the fetched profile photo URL
             src={currentUserProfile.photoURL}
             alt="User profile picture"
             className="w-8 h-auto rounded-full object-cover flex-shrink-0"
