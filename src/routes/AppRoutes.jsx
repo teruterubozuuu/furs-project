@@ -13,6 +13,8 @@ import AdminLayout from "../pages/layout/AdminLayout";
 import Dashboard from "../pages/admin/Dashboard";
 import User from "../pages/admin/User";
 import ForgotPassword from "../pages/ForgotPassword";
+import Notifications from "../pages/app/Notifications";
+import ViewPost from "../pages/app/components/ViewPost";
 
 function AppRoutes() {
   return (
@@ -72,6 +74,17 @@ function AppRoutes() {
           }
         />
 
+        <Route 
+          path="/:username/status/:postId"
+          element={
+            <RequireAuth>
+              <AppLayout>
+                <ViewPost/>
+              </AppLayout>
+            </RequireAuth>
+          }
+          />
+
         <Route
           path="/profile"
           element={
@@ -105,6 +118,17 @@ function AppRoutes() {
           }
         />
 
+        <Route
+          path="/notifications"
+          element={
+            <RequireAuth>
+              <AppLayout>
+                <Notifications/>
+              </AppLayout>
+            </RequireAuth>
+          }
+          />
+
         {/*Route for Admin Layout*/}
         <Route
           path="/admin/dashboard"
@@ -117,7 +141,7 @@ function AppRoutes() {
           }
         />
 
-                <Route
+        <Route
           path="/admin/users"
           element={
             <RequireAuth>

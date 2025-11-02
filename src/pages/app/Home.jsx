@@ -318,9 +318,12 @@ export default function Home() {
             const isOwner = user?.uid === post.userId;
 
             return (
-              <div
+              <Link
                 key={post.id}
-                className=" bg-[#fafafa] border border-gray-200 shadow-sm p-5 rounded-lg text-sm"
+               to={`/${post.username}/status/${post.id}`}
+               >
+               <div
+                className="mb-3 bg-[#fafafa] border border-gray-200 shadow-sm p-5 rounded-lg text-sm cursor-pointer"
               >
                 {/* Post header */}
                 <div className="border-b border-gray-200">
@@ -399,11 +402,13 @@ export default function Home() {
                           <div className="relative flex flex-col items-end">
                             {/* Post Menu Button */}
                             <i
-                              onClick={() =>
+                              onClick={(e) =>{
+                                e.preventDefault();
+                                e.stopPropagation();
                                 setOpenMenuId(
                                   openMenuId === post.id ? null : post.id
                                 )
-                              }
+                              }}
                               className="cursor-pointer bi bi-three-dots text-gray-500 hover:text-gray-700 font-medium transition duration-150 ease-in-out text-lg flex justify-end"
                             ></i>
 
@@ -411,7 +416,9 @@ export default function Home() {
                             {openMenuId === post.id && (
                               <div className="flex flex-col items-start border border-gray-200 bg-white w-[80px] rounded-md absolute top-5 right-0 z-10 shadow-sm">
                                 <button
-                                  onClick={() => {
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
                                     handleEditPost(post);
                                     setOpenMenuId(null);
                                   }}
@@ -420,7 +427,9 @@ export default function Home() {
                                   Edit
                                 </button>
                                 <button
-                                  onClick={() => {
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
                                     handleDeletePost(post.id, post.type);
                                     setOpenMenuId(null);
                                   }}
@@ -490,7 +499,8 @@ export default function Home() {
                     <span>Rate</span>
                   </div>
                 </div>
-              </div>
+                </div>
+              </Link>
             );
           });
         })()
