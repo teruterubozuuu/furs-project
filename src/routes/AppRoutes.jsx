@@ -12,6 +12,7 @@ import LandingPage from "../pages/landingpage/LandingPage";
 import AdminLayout from "../pages/layout/AdminLayout";
 import Dashboard from "../pages/admin/Dashboard";
 import User from "../pages/admin/User";
+import Organizations from "../pages/app/Organizations";
 
 function AppRoutes() {
   return (
@@ -74,6 +75,17 @@ function AppRoutes() {
         />
 
         <Route
+          path="/organizations"
+          element={
+            <RequireAuth>
+              <AppLayout>
+                <Organizations />
+              </AppLayout>
+            </RequireAuth>
+          }
+        />
+
+        <Route
           path="/profile/:userId" // <-- This colon (:) is essential!
           element={
             <RequireAuth>
@@ -107,12 +119,12 @@ function AppRoutes() {
           }
         />
 
-                <Route
+        <Route
           path="/admin/users"
           element={
             <RequireAuth>
               <AdminLayout>
-                <User/>
+                <User />
               </AdminLayout>
             </RequireAuth>
           }
