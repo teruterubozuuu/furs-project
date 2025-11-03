@@ -8,6 +8,8 @@ import {
   deleteDoc,
   setDoc,
   increment,
+  collection,
+  getDocs,
 } from "firebase/firestore";
 import { useAuth } from "../../../context/AuthContext";
 import defaultImg from "../../../assets/default_img.jpg";
@@ -26,6 +28,11 @@ export default function ViewPost() {
   const [isEditing, setIsEditing] = useState(false);
   const [postToEdit, setPostToEdit] = useState(null);
 
+  const [userRating, setUserRating] = useState(0);
+  const [hoverRating, setHoverRating] = useState(0);
+  const [averageRating, setAverageRating] = useState(0);
+  const [ratingCount, setRatingCount] = useState(0);
+
   // Fetch post data
   useEffect(() => {
     const fetchPost = async () => {
@@ -39,10 +46,20 @@ export default function ViewPost() {
           setLikesCount(postData.likes || 0);
           setIsOwner(user?.uid === postData.userId);
 
+          setAverageRating(postData.averageRating || 0);
+          setRatingCount(postData.ratingCount || 0);
+
           if (user?.uid) {
             const likeRef = doc(db, "posts", postId, "likes", user.uid);
             const likeSnap = await getDoc(likeRef);
             setIsLikedByUser(likeSnap.exists());
+
+            // fetches user rating
+            const ratingRef = doc(db, "posts", postId, "ratings", user.uid);
+            const ratingSnap = await getDoc(ratingRef);
+            if (ratingSnap.exists()) {
+              setUserRating(ratingSnap.data().value);
+            }
           }
 
           if (postData.location?.lat && postData.location?.lng) {
@@ -82,13 +99,11 @@ export default function ViewPost() {
     try {
       const likeSnap = await getDoc(likeRef);
       if (likeSnap.exists()) {
-        // Unlike
         await deleteDoc(likeRef);
         await updateDoc(postRef, { likes: increment(-1) });
         setIsLikedByUser(false);
         setLikesCount((prev) => prev - 1);
       } else {
-        // Like
         await setDoc(likeRef, { userId: user.uid, timestamp: new Date() });
         await updateDoc(postRef, { likes: increment(1) });
         setIsLikedByUser(true);
@@ -96,6 +111,40 @@ export default function ViewPost() {
       }
     } catch (error) {
       console.error("Error toggling like:", error);
+    }
+  };
+
+  // handles rating
+  const handleRating = async (value) => {
+    if (!user) {
+      alert("Please log in to rate posts.");
+      return;
+    }
+
+    try {
+      const ratingRef = doc(db, "posts", postId, "ratings", user.uid);
+      await setDoc(ratingRef, {
+        value,
+        userId: user.uid,
+        timestamp: new Date(),
+      });
+
+      // Recalculate average
+      const ratingsSnap = await getDocs(collection(db, "posts", postId, "ratings"));
+      const ratings = ratingsSnap.docs.map((d) => d.data().value);
+      const avg = ratings.reduce((a, b) => a + b, 0) / ratings.length;
+
+      const postRef = doc(db, "posts", postId);
+      await updateDoc(postRef, {
+        averageRating: avg,
+        ratingCount: ratings.length,
+      });
+
+      setUserRating(value);
+      setAverageRating(avg);
+      setRatingCount(ratings.length);
+    } catch (error) {
+      console.error("Error adding rating:", error);
     }
   };
 
@@ -113,13 +162,11 @@ export default function ViewPost() {
     }
   };
 
-  // Edit Post
   const handleEditPost = (post) => {
     setPostToEdit(post);
     setIsEditing(true);
   };
 
-  // Update Post
   const handleUpdatePost = async (postId, postType, updatedData) => {
     const collectionName = getCollectionName(postType);
 
@@ -132,7 +179,6 @@ export default function ViewPost() {
     try {
       const postRef = doc(db, collectionName, postId);
       await updateDoc(postRef, updatedData);
-
       setPost((prev) => ({ ...prev, ...updatedData }));
       console.log(`Post ${postId} updated successfully in ${collectionName}`);
     } catch (error) {
@@ -141,15 +187,12 @@ export default function ViewPost() {
     }
   };
 
-  // Delete Post
   const handleDeletePost = async (postId, postType) => {
     if (!window.confirm("Are you sure you want to delete this post?")) return;
-
     const collectionName = getCollectionName(postType);
     try {
       const postRef = doc(db, collectionName, postId);
       await deleteDoc(postRef);
-      console.log(`Post ${postId} deleted successfully from ${collectionName}`);
       alert("Post deleted successfully!");
     } catch (error) {
       console.error("Error deleting post:", error);
@@ -162,7 +205,6 @@ export default function ViewPost() {
 
   return (
     <div className="xl:min-w-[650px] border border-gray-200 bg-white rounded-lg p-7">
-      {/* Render modal only if editing + postToEdit exists */}
       {isEditing && postToEdit && (
         <EditPostModal
           isOpen={isEditing}
@@ -199,17 +241,20 @@ export default function ViewPost() {
                   </Link>
                   <p className="text-[11px] text-gray-600">
                     {post.createdAt?.toDate
-                      ? post.createdAt.toDate().toLocaleString("en-US", {
-                          year: "numeric",
-                          month: "short",
-                          day: "numeric",
-                          hour: "numeric",
-                          minute: "2-digit",
-                          hour12: true,
-                        })
+                      ? post.createdAt
+                          .toDate()
+                          .toLocaleString("en-US", {
+                            year: "numeric",
+                            month: "short",
+                            day: "numeric",
+                            hour: "numeric",
+                            minute: "2-digit",
+                            hour12: true,
+                          })
                       : "Just now"}
                   </p>
                 </div>
+
                 <div className="flex items-center gap-2">
                   <span
                     className={`text-xs p-1 border rounded-sm ${
@@ -223,7 +268,6 @@ export default function ViewPost() {
                     {post.status}
                   </span>
 
-                  {/* Dog characteristics */}
                   <div className="flex py-1 gap-2">
                     {post.coatColor && (
                       <span className="text-xs p-1 border bg-green-100 text-green-700 border-green-300 rounded-sm">
@@ -240,7 +284,6 @@ export default function ViewPost() {
               </div>
             </div>
 
-            {/* Edit/Delete */}
             {isOwner && (
               <div className="relative flex flex-col items-end">
                 <i
@@ -292,7 +335,7 @@ export default function ViewPost() {
           <div className="italic text-gray-400 text-sm">{address}</div>
 
           {/* Like, Comment, Rate */}
-          <div className="flex justify-between xl:justify-around px-2 text-md text-gray-500 font-medium border-t border-gray-200 pt-3">
+          <div className="flex flex-col xl:flex-row justify-between xl:justify-around px-2 text-md text-gray-500 font-medium border-t border-gray-200 pt-3 gap-2">
             <button
               onClick={handleLike}
               className="group cursor-pointer flex items-center gap-1"
@@ -320,10 +363,30 @@ export default function ViewPost() {
               <span>Comment</span>
             </div>
 
-            <div className="flex items-center gap-2 cursor-pointer hover:text-gray-700">
-              <i className="bi bi-star-half"></i>
-              <span>Rate</span>
+            {/* rating section */}
+            <div className="flex flex-col items-center gap-1">
+              <div className="flex items-center gap-1">
+                {[1, 2, 3, 4, 5].map((value) => (
+                  <i
+                    key={value}
+                    className={`bi ${
+                      (hoverRating || userRating) >= value
+                        ? "bi-star-fill text-[#fbc02d]"
+                        : "bi-star text-gray-400"
+                    } cursor-pointer text-lg transition`}
+                    onMouseEnter={() => setHoverRating(value)}
+                    onMouseLeave={() => setHoverRating(0)}
+                    onClick={() => handleRating(value)}
+                  ></i>
+                ))}
+              </div>
+              <div className="text-xs text-gray-500">
+                {ratingCount > 0
+                  ? `⭐ ${averageRating.toFixed(1)} (${ratingCount})`
+                  : "No ratings yet"}
+              </div>
             </div>
+            {/* end rating */}
           </div>
         </div>
       ) : (
