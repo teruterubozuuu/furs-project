@@ -10,6 +10,8 @@ import {
   increment,
   collection,
   getDocs,
+  addDoc,
+  serverTimestamp,
 } from "firebase/firestore";
 import { useAuth } from "../../../context/AuthContext";
 import defaultImg from "../../../assets/default_img.jpg";
@@ -17,7 +19,7 @@ import EditPostModal from "./EditPostModal";
 
 export default function ViewPost() {
   const { username, postId } = useParams();
-  const { user } = useAuth();
+  const { user, userData } = useAuth();
 
   const [post, setPost] = useState(null);
   const [isOwner, setIsOwner] = useState(false);
@@ -33,6 +35,10 @@ export default function ViewPost() {
   const [averageRating, setAverageRating] = useState(0);
   const [ratingCount, setRatingCount] = useState(0);
 
+  // new state for adding comments
+  const [commentText, setCommentText] = useState("");
+  const [comments, setComments] = useState([]);
+
   // Fetch post data
   useEffect(() => {
     const fetchPost = async () => {
@@ -45,7 +51,6 @@ export default function ViewPost() {
           setPost({ id: postSnap.id, ...postData });
           setLikesCount(postData.likes || 0);
           setIsOwner(user?.uid === postData.userId);
-
           setAverageRating(postData.averageRating || 0);
           setRatingCount(postData.ratingCount || 0);
 
@@ -86,6 +91,42 @@ export default function ViewPost() {
     fetchPost();
   }, [postId, user?.uid]);
 
+  // fetch comments
+  useEffect(() => {
+    const fetchComments = async () => {
+      try {
+        const commentsSnap = await getDocs(collection(db, "posts", postId, "comments"));
+        setComments(commentsSnap.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
+      } catch (error) {
+        console.error("Error fetching comments:", error);
+      }
+    };
+    fetchComments();
+  }, [postId]);
+
+  // creates a notification
+  const createNotification = async (type, postOwnerId, extraData = {}) => {
+    if (user.uid === postOwnerId) return; // prevents self-notification
+
+    try {
+      const notifRef = collection(db, "users", postOwnerId, "notifications");
+      await addDoc(notifRef, {
+        senderId: user.uid,
+        senderName: userData?.username || "Someone",
+        senderPhoto: userData?.profilePhoto || "",
+        postId,
+        postDescription: post?.description?.slice(0, 80) || "",
+        type,
+        value: extraData.value || null, // for rating stars
+        comment: extraData.comment || null, // for comment text
+        timestamp: serverTimestamp(),
+        read: false,
+      });
+    } catch (error) {
+      console.error("Error creating notification:", error);
+    }
+  };
+
   // Like/Unlike post
   const handleLike = async () => {
     if (!user) {
@@ -108,6 +149,11 @@ export default function ViewPost() {
         await updateDoc(postRef, { likes: increment(1) });
         setIsLikedByUser(true);
         setLikesCount((prev) => prev + 1);
+
+        // create like notification
+        if (post?.userId) {
+          await createNotification("like", post.userId);
+        }
       }
     } catch (error) {
       console.error("Error toggling like:", error);
@@ -143,12 +189,56 @@ export default function ViewPost() {
       setUserRating(value);
       setAverageRating(avg);
       setRatingCount(ratings.length);
+
+      // creates rating notification
+      if (post?.userId) {
+        await createNotification("rating", post.userId, { value });
+      }
     } catch (error) {
       console.error("Error adding rating:", error);
     }
   };
 
-  // Get collection name dynamically
+  // Add comment
+  const handleAddComment = async () => {
+    if (!user) {
+      alert("Please log in to comment.");
+      return;
+    }
+    if (!commentText.trim()) return;
+
+    try {
+      const commentRef = collection(db, "posts", postId, "comments");
+      await addDoc(commentRef, {
+        userId: user.uid,
+        username: userData?.username || "Anonymous",
+        profilePhoto: userData?.profilePhoto || "",
+        text: commentText,
+        timestamp: new Date(),
+      });
+
+      setComments((prev) => [
+        ...prev,
+        {
+          userId: user.uid,
+          username: userData?.username || "Anonymous",
+          profilePhoto: userData?.profilePhoto || "",
+          text: commentText,
+          timestamp: new Date(),
+        },
+      ]);
+
+      // create comment notification
+      if (post?.userId) {
+        await createNotification("comment", post.userId, { comment: commentText });
+      }
+
+      setCommentText("");
+    } catch (error) {
+      console.error("Error adding comment:", error);
+    }
+  };
+
   const getCollectionName = (postType) => {
     switch (postType) {
       case "Lost Pet":
@@ -169,9 +259,7 @@ export default function ViewPost() {
 
   const handleUpdatePost = async (postId, postType, updatedData) => {
     const collectionName = getCollectionName(postType);
-
     if (!postId) {
-      console.error("Post ID is undefined.");
       alert("Error: Missing post ID.");
       return;
     }
@@ -180,7 +268,6 @@ export default function ViewPost() {
       const postRef = doc(db, collectionName, postId);
       await updateDoc(postRef, updatedData);
       setPost((prev) => ({ ...prev, ...updatedData }));
-      console.log(`Post ${postId} updated successfully in ${collectionName}`);
     } catch (error) {
       console.error("Error updating post:", error);
       alert("Failed to update post. Please try again.");
@@ -386,7 +473,38 @@ export default function ViewPost() {
                   : "No ratings yet"}
               </div>
             </div>
-            {/* end rating */}
+          </div>
+
+          {/* comments section */}
+          <div className="mt-4 flex flex-col gap-2">
+            {comments.map((comment) => (
+              <div key={comment.id} className="flex items-start gap-2">
+                <img
+                  src={comment.profilePhoto || defaultImg}
+                  alt="Profile"
+                  className="w-8 h-8 rounded-full object-cover"
+                />
+                <div className="flex flex-col">
+                  <span className="font-semibold text-sm">{comment.username}</span>
+                  <span className="text-gray-700 text-sm">{comment.text}</span>
+                </div>
+              </div>
+            ))}
+            <div className="flex gap-2 mt-2">
+              <input
+                type="text"
+                placeholder="Add a comment..."
+                value={commentText}
+                onChange={(e) => setCommentText(e.target.value)}
+                className="border border-gray-300 rounded-md px-2 py-1 flex-1"
+              />
+              <button
+                onClick={handleAddComment}
+                className="bg-[#2e7d32] text-white px-3 rounded-md"
+              >
+                Post
+              </button>
+            </div>
           </div>
         </div>
       ) : (
