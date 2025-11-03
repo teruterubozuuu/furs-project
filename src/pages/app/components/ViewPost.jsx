@@ -35,7 +35,6 @@ export default function ViewPost() {
   const [averageRating, setAverageRating] = useState(0);
   const [ratingCount, setRatingCount] = useState(0);
 
-  // new state for adding comments
   const [commentText, setCommentText] = useState("");
   const [comments, setComments] = useState([]);
 

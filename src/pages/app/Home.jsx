@@ -470,9 +470,14 @@ export default function Home() {
 
                 <div className="flex flex-1 justify-between xl:justify-around px-2 pt-3 text-md text-gray-500 font-medium">
                   <button
-                    onClick={() => handleLike(post.id, post.type)}
-                    className="group cursor-pointer flex items-center gap-1 "
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      handleLike(post.id, post.type);
+                    }}
+                    className="group cursor-pointer flex items-center gap-1"
                   >
+
                     <i
                       className={`bi ${
                         post.isLikedByUser
