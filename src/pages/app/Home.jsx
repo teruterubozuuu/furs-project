@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { useAuth } from "../../context/AuthContext";
 import { db } from "../../firebase/config";
 import {
   collection,
@@ -21,7 +20,6 @@ import defaultImg from "../../assets/default_img.jpg";
 import { OrbitProgress } from "react-loading-indicators";
 import Filter from "./components/Filter";
 import { useAuth } from "../../context/AuthContext";
-import {doc,getDoc} from "firebase/firestore"
 
 
 const getCollectionName = (postType) => {
@@ -40,6 +38,7 @@ export default function Home() {
   const [openMenuId, setOpenMenuId] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
   const [postToEdit, setPostToEdit] = useState(null);
+  const [userType, setUserType] = useState("");
 
   const [currentUserProfile, setCurrentUserProfile] = useState({
     photoURL: defaultImg,
@@ -109,6 +108,7 @@ export default function Home() {
             photoURL: data.profilePhoto || defaultImg,
             username: data.username || user.displayName,
           });
+          setUserType(data.userType || "");
         }
 
 
