@@ -20,6 +20,7 @@ import { confirmAlert } from "react-confirm-alert";
 import "react-confirm-alert/src/react-confirm-alert.css";
 import { signOut } from "firebase/auth";
 import { useNavigate, useParams } from "react-router-dom";
+import { Link } from "react-router-dom";
 
 //Star Icon Helper Component
 const StarRatingDisplay = ({ rating, count }) => {
@@ -58,7 +59,7 @@ const StarRatingDisplay = ({ rating, count }) => {
 
 // Post Card Component 
 const PostCard = ({ post }) => (
-  <div className="border border-gray-200 p-4 rounded-lg shadow-sm bg-white space-y-3">
+  <div className="border border-gray-200 p-4 rounded-lg shadow-sm bg-white space-y-3 mb-4">
      {" "}
     <div className="flex justify-between items-start">
       {" "}
@@ -88,8 +89,8 @@ const PostCard = ({ post }) => (
       </div>
     )}
     {" "}
-    <div className="border-t pt-3">
-       <p className="font-semibold text-sm mb-1">Description:</p>{" "}
+    <div className="border-t border-gray-200 pt-3">
+       <p className="font-semibold text-sm mb-1 text-green-700">Description:</p>{" "}
       <p className="text-gray-700 text-sm">
         {post.description || "No detailed description available."}{" "}
       </p>
@@ -320,9 +321,6 @@ useEffect(() => {
     <div className=" h-auto space-y-8">
       <div className="border border-gray-200 shadow-sm flex flex-wrap sm:flex-nowrap items-center gap-3 p-4 rounded-lg overflow-hidden bg-[#fafafa]">
         <main className="w-screen space-y-2 p-2">
-          <h1 className="font-semibold text-xl text-center">
-            {isOwner ? "Your Profile" : `${username}'s Profile`}
-          </h1>
           <div className="flex justify-center items-center flex-col space-y-2">
             {/* 1. Profile Picture and Change Overlay */}
             <div className="relative group w-24 h-24 flex justify-center items-center m-2">
@@ -353,7 +351,7 @@ useEffect(() => {
             <h2 className="text-base font-semibold">
               {username || "Loading..."}
             </h2>
-            <h3 className="text-sm text-gray-500">{role || "Loading..."}</h3>
+            <h3 className="text-sm text-[rgb(40,112,56)]">{role || "Loading..."}</h3>
 
             {/* RATING DISPLAY */}
             {(ratingCount > 0 || !isOwner) && (
@@ -406,7 +404,7 @@ useEffect(() => {
                 <button
                   type="button"
                   onClick={() => setIsEditing(true)}
-                  className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition duration-200"
+                  className="px-4 py-2 bg-[rgb(40,112,56)] text-white cursor-pointer  text-xs rounded-full hover:bg-[rgb(43,81,51)]  transition duration-200"
                 >
                   Edit Profile
                 </button>
@@ -416,7 +414,7 @@ useEffect(() => {
                 <button
                   type="button"
                   onClick={handleSave}
-                  className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition duration-200"
+                  className="px-4 py-2 bg-[rgb(40,112,56)] cursor-pointer text-white  text-xs rounded-full hover:bg-[rgb(43,81,51)] transition duration-200"
                 >
                   Save Changes
                 </button>
@@ -434,13 +432,9 @@ useEffect(() => {
                 </button>
               )}
             </div>
-          </div>
-        </main>
-      </div>
-
       {/* --- USER POSTS SECTION --- */}
-      <div className="mt-8">
-        <h2 className="text-xl font-bold mb-4 border-b pb-2">
+      <div className="mt-8 ">
+        <h2 className="text-xl text-[rgb(40,112,56)] font-bold mb-4 border-b border-gray-200 pb-2">
           {isOwner ? "Your Activity" : `${username}'s Posts`}
         </h2>
 
@@ -457,11 +451,18 @@ useEffect(() => {
         {!loadingPosts && userPosts.length > 0 && (
           <div className="space-y-4">
             {userPosts.map((post) => (
-              <PostCard key={post.id} post={post} />
+              <Link to={`/${post.username}/status/${post.id}`}>
+               <PostCard key={post.id} post={post} />
+              </Link>
             ))}
           </div>
         )}
       </div>
+
+          </div>
+        </main>
+      </div>
+
     </div>
   );
 }

@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { NavLink } from "react-router-dom";
 import logo from "../../../assets/logo_furs.png";
+import { Link } from "react-scroll";
+
 
 
 export default function LPNavbar() {
@@ -9,12 +11,12 @@ export default function LPNavbar() {
   return (
     <header className="sticky z-100 top-0 left-0 w-full bg-[#fafafa]">
       <div className="flex justify-between h-full px-5 py-2 items-center ">
-        <NavLink to="/"><img src={logo} alt="F.U.R.S. Logo" className="w-40"/></NavLink>
+        <NavLink to="/" className="cursor-pointer"><img src={logo} alt="F.U.R.S. Logo" className="w-40"/></NavLink>
         {/* Desktop Menu */}
-        <nav className="hidden md:flex gap-5 items-center text-[#2e7d32] font-medium">
-          <NavLink to="/">Features</NavLink>
-          <NavLink to="/about">About</NavLink>
-          <NavLink to="/contact">Contact</NavLink>
+        <nav className="hidden md:flex gap-5 items-center text-[#2e7d32] font-medium cursor-pointer">
+          <Link to="features" className="hover:text-[#1e5720] transition-all ease-in ">Features</Link>
+          <Link to="about" className="hover:text-[#1e5720] transition-all ease-in ">About</Link>
+          <Link to="contact" className="hover:text-[#1e5720] transition-all ease-in ">Contact</Link>
           <NavLink
             to="/login"
             className="bg-[#2e7d32] hover:bg-[#1e5720] transition-all ease-in text-white py-[4px] px-8 rounded-sm font-semibold"

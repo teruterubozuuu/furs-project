@@ -30,7 +30,7 @@ const LOCAL_ORGS = [
 
 export default function LeftSideBar() {
   return (
-    <div className="h-full hidden xl:flex  xl:flex-col xl:w-full p-5 border rounded-lg bg-[#fafafa] border-gray-200 shadow-sm ">
+    <div className=" hidden xl:flex  xl:flex-col xl:w-full p-5 border rounded-lg bg-[#fafafa] border-gray-200 shadow-sm ">
       <div className="text-sm">
         <h1 className="text-lg font-semibold text-[#2e7d32]">
           Animal Welfare Organizations

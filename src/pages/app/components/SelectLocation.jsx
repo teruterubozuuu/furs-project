@@ -1,5 +1,11 @@
 import { useState, useEffect, useRef } from "react";
-import { MapContainer, TileLayer, Marker, useMap, useMapEvents } from "react-leaflet";
+import {
+  MapContainer,
+  TileLayer,
+  Marker,
+  useMap,
+  useMapEvents,
+} from "react-leaflet";
 import L from "leaflet";
 import Fuse from "fuse.js";
 import "leaflet/dist/leaflet.css";
@@ -38,6 +44,7 @@ export default function SelectLocation({ onClose, onSelect }) {
   const [loadingMsg, setLoadingMsg] = useState("");
   const [suggestions, setSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [landmark, setLandmark] = useState("");
 
   const abortControllerRef = useRef(null);
   const debounceRef = useRef(null);
@@ -112,9 +119,11 @@ export default function SelectLocation({ onClose, onSelect }) {
 
         let message = "";
         if (err.code === err.PERMISSION_DENIED) {
-          message = "Location permission denied. Please enable location access in your browser settings.";
+          message =
+            "Location permission denied. Please enable location access in your browser settings.";
         } else if (err.code === err.POSITION_UNAVAILABLE) {
-          message = "Location information is unavailable. Please check your internet or GPS.";
+          message =
+            "Location information is unavailable. Please check your internet or GPS.";
         } else if (err.code === err.TIMEOUT) {
           message = "Request timed out. Please try again.";
         } else {
@@ -165,7 +174,8 @@ export default function SelectLocation({ onClose, onSelect }) {
         });
 
         const results = fuse.search(query);
-        const finalResults = results.length > 0 ? results.map(r => r.item) : data;
+        const finalResults =
+          results.length > 0 ? results.map((r) => r.item) : data;
 
         setSuggestions(finalResults.slice(0, 5));
         setShowSuggestions(true);
@@ -248,10 +258,17 @@ export default function SelectLocation({ onClose, onSelect }) {
       <div className="bg-white rounded-2xl shadow-lg w-[90%] max-w-lg p-5 relative animate-fadeIn">
         {/* header */}
         <div className="flex justify-between items-center mb-3">
-          <h2 className="font-semibold text-lg text-green-700 flex items-center gap-2">
-            <i className="bi bi-geo-alt-fill text-[#fbc02d]"></i>
-            Select Location
-          </h2>
+          <div>
+<h2 className="font-semibold text-lg text-green-700 flex items-center gap-2">
+  <i className="bi bi-geo-alt-fill text-[#fbc02d]"></i>
+  Select Location
+</h2>
+<p className="text-gray-500 text-xs italic">
+  Specify the location where the stray animal was spotted.  
+  For lost pets, indicate where the animal was last seen.
+</p>
+          </div>
+
           <button
             onClick={onClose}
             className="text-gray-500 hover:text-red-600 transition cursor-pointer text-lg"
@@ -265,10 +282,11 @@ export default function SelectLocation({ onClose, onSelect }) {
           <button
             onClick={handleCurrent}
             disabled={isLoading}
-            className={`${loadingType === "current"
+            className={`${
+              loadingType === "current"
                 ? "bg-green-400"
                 : "bg-green-600 hover:bg-green-700"
-              } text-white px-3 py-2 rounded-lg transition flex items-center gap-1`}
+            } text-white px-3 py-2 rounded-lg transition flex items-center gap-1 cursor-pointer`}
           >
             <i className="bi bi-crosshair"></i>
             {loadingType === "current"
@@ -279,8 +297,9 @@ export default function SelectLocation({ onClose, onSelect }) {
           <button
             onClick={enablePinMode}
             disabled={isLoading}
-            className={`${canPin ? "bg-yellow-600" : "bg-yellow-500 hover:bg-yellow-600"
-              } text-white px-3 py-2 rounded-lg transition flex items-center gap-1`}
+            className={`${
+              canPin ? "bg-yellow-600" : "bg-yellow-500 hover:bg-yellow-600"
+            } text-white px-3 py-2 rounded-lg transition flex items-center gap-1 cursor-pointer`}
           >
             <i className="bi bi-geo"></i>
             {canPin ? "Pinning Active" : "Pin on Map"}
@@ -298,15 +317,16 @@ export default function SelectLocation({ onClose, onSelect }) {
               fetchSuggestions(val);
             }}
             placeholder="Type location (e.g., Kamuning Road)"
-            className="border flex-1 rounded-lg px-3 py-2 focus:outline-none focus:ring focus:ring-green-200 text-sm"
+            className="border flex-1 rounded-lg px-3 py-2 focus:outline-none text-sm"
           />
           <button
             onClick={handleSearch}
             disabled={isLoading}
-            className={`${loadingType === "search"
+            className={`${
+              loadingType === "search"
                 ? "bg-blue-400"
-                : "bg-blue-600 hover:bg-blue-700"
-              } text-white px-3 py-2 rounded-lg transition text-sm flex items-center gap-1`}
+                : "bg-green-600 hover:bg-green-700"
+            } text-white px-3 py-2 rounded-lg transition text-sm flex items-center gap-1 cursor-pointer`}
           >
             <i className="bi bi-search"></i>
             {loadingType === "search" ? "Searching…" : "Search"}
@@ -319,7 +339,10 @@ export default function SelectLocation({ onClose, onSelect }) {
               <li
                 key={i}
                 onClick={() => {
-                  const coords = { lat: parseFloat(s.lat), lng: parseFloat(s.lon) };
+                  const coords = {
+                    lat: parseFloat(s.lat),
+                    lng: parseFloat(s.lon),
+                  };
                   setPosition(coords);
                   setManualInput(s.display_name);
                   setSuggestions([]);
@@ -334,7 +357,7 @@ export default function SelectLocation({ onClose, onSelect }) {
         )}
 
         {/* map */}
-        <div className="h-60 mb-4 rounded-lg overflow-hidden border border-gray-200 relative">
+        <div className="h-60 rounded-lg overflow-hidden border border-gray-200 relative">
           {(loadingType === "current" || loadingType === "search") && (
             <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/70 z-[1000] text-gray-600 text-sm">
               <div className="loader border-2 border-t-green-600 rounded-full w-6 h-6 animate-spin mb-2"></div>
@@ -357,11 +380,25 @@ export default function SelectLocation({ onClose, onSelect }) {
           </MapContainer>
         </div>
 
+        {/* Add Landmark */}
+        <div className="my-4">
+          <p className="text-sm text-gray-500 mb-2 italic font-medium">
+            Add a nearby landmark to help others easily recognize the location.
+          </p>
+          <input
+            type="text"
+            value={landmark}
+            onChange={(e) => setLandmark(e.target.value)}
+            placeholder="e.g., Near City Hall or beside the gas station"
+            className="border border-gray-300 rounded-md p-2 focus:outline-none focus:ring-1 focus:ring-green-600 w-full text-sm"
+          />
+        </div>
+
         {/* footer */}
         <div className="flex justify-end gap-2">
           <button
             onClick={onClose}
-            className="bg-gray-300 px-4 py-2 rounded-lg hover:bg-gray-400 transition text-sm"
+            className="bg-gray-300 px-4 py-2 rounded-lg hover:bg-gray-400 transition text-sm cursor-pointer"
           >
             Cancel
           </button>
@@ -371,9 +408,9 @@ export default function SelectLocation({ onClose, onSelect }) {
                 showToast("Please select a location first.", "confirm");
                 return;
               }
-              onSelect(position);
+              onSelect({...position,landmark});
             }}
-            className="bg-green-700 text-white px-4 py-2 rounded-lg hover:bg-green-800 transition text-sm"
+            className="bg-green-700 text-white px-4 py-2 rounded-lg hover:bg-green-800 transition text-sm cursor-pointer"
           >
             Confirm
           </button>

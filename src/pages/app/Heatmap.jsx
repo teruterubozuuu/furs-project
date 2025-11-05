@@ -8,12 +8,11 @@ import { db } from "../../firebase/config";
 
 export default function Heatmap() {
   const [points, setPoints] = useState([]);
+  const [topAreas, setTopAreas] = useState([]);
+  const [areaNames, setAreaNames] = useState([]);
 
   useEffect(() => {
-    // include all relevant collections (old + new)
-    const collections = [
-      "posts",
-    ];
+    const collections = ["posts"];
     const unsubscribeFns = [];
 
     collections.forEach((colName) => {
@@ -24,7 +23,6 @@ export default function Heatmap() {
           const newPoints = [];
           snapshot.forEach((doc) => {
             const data = doc.data();
-            // handles both new and legacy Firestore location structures
             if (data.location?.lat && data.location?.lng) {
               newPoints.push([data.location.lat, data.location.lng]);
             } else if (data.lat && data.lng) {
@@ -34,7 +32,10 @@ export default function Heatmap() {
 
           setPoints((prevPoints) => {
             const combined = [...prevPoints, ...newPoints];
-            const unique = Array.from(new Set(combined.map(JSON.stringify)), JSON.parse);
+            const unique = Array.from(
+              new Set(combined.map(JSON.stringify)),
+              JSON.parse
+            );
             return unique;
           });
         },
@@ -45,9 +46,7 @@ export default function Heatmap() {
       unsubscribeFns.push(unsubscribe);
     });
 
-    return () => {
-      unsubscribeFns.forEach((unsub) => unsub());
-    };
+    return () => unsubscribeFns.forEach((unsub) => unsub());
   }, []);
 
   function HeatmapLayer({ points }) {
@@ -68,15 +67,98 @@ export default function Heatmap() {
     return null;
   }
 
+  function summarizeTopAreas(points) {
+    const counts = {};
+
+    points.forEach(([lat, lng]) => {
+      const roundedLat = lat.toFixed(2); 
+      const roundedLng = lng.toFixed(2);
+      const key = `${roundedLat},${roundedLng}`;
+      counts[key] = (counts[key] || 0) + 1;
+    });
+
+    const sorted = Object.entries(counts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([coords, count]) => {
+        const [lat, lng] = coords.split(",").map(Number);
+        return { lat, lng, count };
+      });
+
+    return sorted;
+  }
+
+useEffect(() => {
+  if (topAreas.length > 0) {
+    fetchAreaNames(topAreas).then((results) => {
+      const merged = results.reduce((acc, area) => {
+        const existing = acc.find((a) => a.name === area.name);
+        if (existing) {
+          existing.count += area.count;
+        } else {
+          acc.push({ ...area });
+        }
+        return acc;
+      }, []);
+
+      const sorted = merged.sort((a, b) => b.count - a.count).slice(0, 5);
+      setAreaNames(sorted);
+    });
+  }
+}, [topAreas]);
+
+
+  useEffect(() => {
+  if (points.length > 0) {
+    setTopAreas(summarizeTopAreas(points));
+  }
+}, [points]);
+
+
+  async function fetchAreaNames(topAreas) {
+    const results = await Promise.all(
+      topAreas.map(async (area) => {
+        try {
+          const res = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?lat=${area.lat}&lon=${area.lng}&format=json&accept-language=en`
+          );
+          const json = await res.json();
+          const addr = json.address || {};
+
+
+          const name =
+            addr.suburb ||
+            addr.village ||
+            addr.neighbourhood ||
+            addr.city_district ||
+            addr.city ||
+            addr.state ||
+            "Unknown area";
+
+          return { ...area, name };
+        } catch {
+          return { ...area, name: "Unknown area" };
+        }
+      })
+    );
+    return results;
+  }
+
+
   return (
-    <div className="max-w-[1000px] mx-auto h-auto space-y-4 bg-[#fafafa]">
-      <div className="border border-gray-300 flex flex-wrap sm:flex-nowrap items-center gap-3 p-4 rounded-sm overflow-hidden">
+    <div className="max-w-[1000px] mx-auto h-auto space-y-4 bg-[#fafafa] rounded-lg shadow-sm p-5 border border-gray-200">
+      <div className=" flex flex-wrap sm:flex-nowrap items-center gap-3 overflow-hidden">
         <main className="w-screen space-y-2 p-2">
-          <h1 className="text-lg font-semibold">Heatmap</h1>
-          {/* Leaflet Heatmap */}
-          <div className="h-[500px] w-full border rounded-md overflow-hidden">
+          <h1 className="text-xl text-green-700  font-bold">Heatmap</h1>
+          <p className="text-gray-700 text-sm">
+            This heatmap highlights areas with a high concentration of stray
+            animal sightings, grouped approximately by barangay or district.
+          </p>
+
+          {/* Heatmap */}
+          <div className="h-[500px] w-full border border-gray-300 rounded-md overflow-hidden">
             <MapContainer
-              center={[14.629508172604881, 121.04187250878618]} // CIIT coordinates
+              center={[14.6295, 121.0419]} 
               zoom={15}
               scrollWheelZoom={true}
               style={{ height: "100%", width: "100%" }}
@@ -89,6 +171,31 @@ export default function Heatmap() {
             </MapContainer>
           </div>
         </main>
+      </div>
+
+
+      <div className="flex justify-center">
+        <div className="text-center">
+<h2 className="font-semibold text-lg text-green-700 mb-2">Top 5 Areas</h2>
+        {areaNames.length > 0 ? (
+          <ul className="text-sm text-gray-700 list-none space-y-2">
+            {areaNames.map((area, index) => (
+              <li key={index}>
+                <span className="font-medium">
+                  #{index + 1}: {area.name}
+                </span>
+                <br />
+                <span className="text-gray-500 text-xs">
+                  ({area.count} reports)
+                </span>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-gray-500 text-sm">Not enough data yet.</p>
+        )}
+        </div>
+        
       </div>
     </div>
   );

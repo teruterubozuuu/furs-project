@@ -21,7 +21,6 @@ import { OrbitProgress } from "react-loading-indicators";
 import Filter from "./components/Filter";
 import { useAuth } from "../../context/AuthContext";
 
-
 const getCollectionName = (postType) => {
   if (postType === "Stray Animal") return "stray_animal_posts";
   if (postType === "Lost Pet") return "lost_pet_posts";
@@ -110,7 +109,6 @@ export default function Home() {
           });
           setUserType(data.userType || "");
         }
-
 
         const updatedPosts = await Promise.all(
           combined.map(async (post) => {
@@ -263,25 +261,30 @@ export default function Home() {
   return (
     <div className="max-w-[700px] space-y-4">
       <div className=" flex flex-1 flex-wrap sm:flex-nowrap max-w-[700px]  justify-between items-stretch gap-2">
-
-      {userType !== "" && (
-        <div className={userType === "Rescuer" ? "hidden" : "flex-1 flex flex-wrap sm:flex-nowrap items-center gap-3 p-4 rounded-sm border border-gray-200 shadow-sm bg-[#fafafa]"}>
-          <img
-            src={currentUserProfile.photoURL}
-            alt="User profile picture"
-            className="w-8 h-auto rounded-full object-cover flex-shrink-0"
-          />
+        {userType !== "" && (
           <div
-            onClick={() => setIsOpenPost(true)}
-            className="flex-1 border border-gray-300 cursor-pointer rounded-3xl bg-gray-100 hover:bg-gray-200 transition duration-200 ease-in-out"
+            className={
+              userType === "Rescuer"
+                ? "hidden"
+                : "flex-1 flex flex-wrap sm:flex-nowrap items-center gap-3 p-4 rounded-sm border border-gray-200 shadow-sm bg-[#fafafa]"
+            }
           >
-            <p className="w-full text-left p-1 px-2 text-gray-500 font-medium cursor-pointer">
-              Create a post
-            </p>
+            <img
+              src={currentUserProfile.photoURL}
+              alt="User profile picture"
+              className="w-8 h-auto rounded-full object-cover flex-shrink-0"
+            />
+            <div
+              onClick={() => setIsOpenPost(true)}
+              className="flex-1 border border-gray-300 cursor-pointer rounded-3xl bg-gray-100 hover:bg-gray-200 transition duration-200 ease-in-out"
+            >
+              <p className="w-full text-left p-1 px-2 text-gray-500 font-medium cursor-pointer">
+                Create a post
+              </p>
+            </div>
           </div>
-        </div>
-      )}
-        
+        )}
+
         {/* Filter section */}
         <div
           onClick={() => setIsOpenFilter(true)}
@@ -336,11 +339,8 @@ export default function Home() {
             const isOwner = user?.uid === post.userId;
 
             return (
-              <Link
+              <div
                 key={post.id}
-               to={`/${post.username}/status/${post.id}`}
-               >
-               <div
                 className="mb-3 bg-[#fafafa] border border-gray-200 shadow-sm p-5 rounded-lg text-sm cursor-pointer"
               >
                 {/* Post header */}
@@ -420,12 +420,12 @@ export default function Home() {
                           <div className="relative flex flex-col items-end">
                             {/* Post Menu Button */}
                             <i
-                              onClick={(e) =>{
+                              onClick={(e) => {
                                 e.preventDefault();
                                 e.stopPropagation();
                                 setOpenMenuId(
                                   openMenuId === post.id ? null : post.id
-                                )
+                                );
                               }}
                               className="cursor-pointer bi bi-three-dots text-gray-500 hover:text-gray-700 font-medium transition duration-150 ease-in-out text-lg flex justify-end"
                             ></i>
@@ -463,67 +463,83 @@ export default function Home() {
                     </div>
                   </div>
 
-                  {/* Description */}
-                  <p>{post.description}</p>
+                  <Link to={`/${post.username}/status/${post.id}`}>
+                    {/* Description */}
+                    <p>{post.description}</p>
 
-                  {/* Photo */}
-                  <div className="flex justify-center p-3">
-                    <img
-                      src={post.photoURL}
-                      alt="Posted"
-                      className="w-100 rounded-sm"
-                    />
-                  </div>
+                    {/* Photo */}
+                    <div className="flex justify-center p-3">
+                      <img
+                        src={post.photoURL}
+                        alt="Posted"
+                        className="w-100 rounded-sm"
+                      />
+                    </div>
 
-                  {/* Location */}
-                  <div className="py-1 italic text-gray-400 text-sm">
-                    {post.address
-                      ? post.address
-                      : post.location
-                      ? `Latitude: ${post.location.lat.toFixed(
-                          5
-                        )}, Longitude: ${post.location.lng.toFixed(5)}`
-                      : "Location not available"}
-                  </div>
+                    {/* Location */}
+                                          {post.location?.landmark && (
+                        <p className="mt-1 italic text-gray-500">
+                          <span className="font-semibold text-gray-500">
+                            Landmark:
+                          </span>{" "}
+                          {post.location.landmark}
+                        </p>
+                      )}
+                    <div className="py-1 text-sm text-gray-500">
+                      {post.address ? (
+                       <p className="italic"> <span className="font-semibold">Address:</span>  {post.address}</p>
+                      ) : post.location ? (
+                        <p className="italic">
+                          Latitude: {post.location.lat.toFixed(5)}, Longitude:{" "}
+                          {post.location.lng.toFixed(5)}
+                        </p>
+                      ) : (
+                        <p className="italic">Location not available</p>
+                      )}
+
+                    </div>
+                  </Link>
                 </div>
-
-                <div className="flex flex-1 justify-between xl:justify-around px-2 pt-3 text-md text-gray-500 font-medium">
-                  <button
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      handleLike(post.id, post.type);
-                    }}
-                    className="group cursor-pointer flex items-center gap-1"
-                  >
-
-                    <i
-                      className={`bi ${
-                        post.isLikedByUser
-                          ? "bi-hand-thumbs-up-fill text-[#fbc02d]"
-                          : "bi-hand-thumbs-up text-gray-500 group-hover:text-[#fbc02d] transition-all ease-in"
-                      }`}
-                    ></i>
-                    <span
-                      className={`ml-2 font-medium  ${
-                        post.isLikedByUser ? "text-[#fbc02d]" : "text-gray-500 group-hover:text-[#fbc02d] transition-all ease-in"
-                      }`}
+                {/* Post actions */}
+                <Link to={`/${post.username}/status/${post.id}`}>
+                  <div className="flex flex-1 justify-between xl:justify-around px-2 pt-3 text-md text-gray-500 font-medium">
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleLike(post.id, post.type);
+                      }}
+                      className="group cursor-pointer flex items-center gap-1"
                     >
-                      {post.likes > 0 ? post.likes : "Like"}
-                    </span>
-                  </button>
+                      <i
+                        className={`bi ${
+                          post.isLikedByUser
+                            ? "bi-hand-thumbs-up-fill text-[#fbc02d]"
+                            : "bi-hand-thumbs-up text-gray-500 group-hover:text-[#fbc02d] transition-all ease-in"
+                        }`}
+                      ></i>
+                      <span
+                        className={`ml-2 font-medium  ${
+                          post.isLikedByUser
+                            ? "text-[#fbc02d]"
+                            : "text-gray-500 group-hover:text-[#fbc02d] transition-all ease-in"
+                        }`}
+                      >
+                        {post.likes > 0 ? post.likes : "Like"}
+                      </span>
+                    </button>
 
-                  <div className="flex items-center gap-2">
-                    <i className="bi bi-chat"></i>
-                    <span>Comment</span>
+                    <div className="flex items-center gap-2 hover:text-[#fbc02d]">
+                      <i className="bi bi-chat"></i>
+                      <span>Comment</span>
+                    </div>
+                    <div className="flex items-center gap-2 hover:text-[#fbc02d]">
+                      <i class="bi bi-star-half"></i>
+                      <span>Rate</span>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <i class="bi bi-star-half"></i>
-                    <span>Rate</span>
-                  </div>
-                </div>
-                </div>
-              </Link>
+                </Link>
+              </div>
             );
           });
         })()

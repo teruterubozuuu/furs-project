@@ -4,10 +4,10 @@ import backgroundImg from "../../assets/bg_img.jpg";
 
 export default function LandingPageLayout({children}) {
   return (
-    <div className='h-screen bg-[#fafafa]'> 
-      <div >
+    <div className='h-screen' > 
+      <div>
         <LPNavbar />
-        <main>{children}</main>
+        <main >{children}</main>
       </div>
     </div>
   )

@@ -17,6 +17,7 @@ import {
 import { useAuth } from "../../../context/AuthContext";
 import defaultImg from "../../../assets/default_img.jpg";
 import EditPostModal from "./EditPostModal";
+import RatingModal from "./RatingModal";
 
 export default function ViewPost() {
   const { username, postId } = useParams();
@@ -30,11 +31,7 @@ export default function ViewPost() {
   const [openMenuId, setOpenMenuId] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
   const [postToEdit, setPostToEdit] = useState(null);
-
-  const [userRating, setUserRating] = useState(0);
-  const [hoverRating, setHoverRating] = useState(0);
-  const [averageRating, setAverageRating] = useState(0);
-  const [ratingCount, setRatingCount] = useState(0);
+  const [isRating, setIsRating] = useState(false);
 
   const [commentText, setCommentText] = useState("");
   const [comments, setComments] = useState([]);
@@ -51,20 +48,11 @@ export default function ViewPost() {
           setPost({ id: postSnap.id, ...postData });
           setLikesCount(postData.likes || 0);
           setIsOwner(user?.uid === postData.userId);
-          setAverageRating(postData.averageRating || 0);
-          setRatingCount(postData.ratingCount || 0);
 
           if (user?.uid) {
             const likeRef = doc(db, "posts", postId, "likes", user.uid);
             const likeSnap = await getDoc(likeRef);
             setIsLikedByUser(likeSnap.exists());
-
-            // fetches user rating
-            const ratingRef = doc(db, "posts", postId, "ratings", user.uid);
-            const ratingSnap = await getDoc(ratingRef);
-            if (ratingSnap.exists()) {
-              setUserRating(ratingSnap.data().value);
-            }
           }
 
           if (postData.location?.lat && postData.location?.lng) {
@@ -95,8 +83,12 @@ export default function ViewPost() {
   useEffect(() => {
     const fetchComments = async () => {
       try {
-        const commentsSnap = await getDocs(collection(db, "posts", postId, "comments"));
-        setComments(commentsSnap.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
+        const commentsSnap = await getDocs(
+          collection(db, "posts", postId, "comments")
+        );
+        setComments(
+          commentsSnap.docs.map((doc) => ({ id: doc.id, ...doc.data() }))
+        );
       } catch (error) {
         console.error("Error fetching comments:", error);
       }
@@ -115,6 +107,7 @@ export default function ViewPost() {
         senderName: userData?.username || "Someone",
         senderPhoto: userData?.profilePhoto || "",
         postId,
+        postUsername: extraData.postUsername || "",
         postDescription: post?.description?.slice(0, 80) || "",
         type,
         value: extraData.value || null, // for rating stars
@@ -166,34 +159,45 @@ export default function ViewPost() {
       alert("Please log in to rate posts.");
       return;
     }
+    if (post?.userId === user.uid) {
+      alert("You can’t rate your own post.");
+      return;
+    }
 
     try {
-      const ratingRef = doc(db, "posts", postId, "ratings", user.uid);
-      await setDoc(ratingRef, {
-        value,
-        userId: user.uid,
-        timestamp: new Date(),
-      });
+      const targetUserRef = doc(db, "users", post.userId);
+      const ratingDocRef = doc(targetUserRef, "ratings", user.uid);
 
-      // Recalculate average
-      const ratingsSnap = await getDocs(collection(db, "posts", postId, "ratings"));
-      const ratings = ratingsSnap.docs.map((d) => d.data().value);
-      const avg = ratings.reduce((a, b) => a + b, 0) / ratings.length;
+      // Get current total rating info
+      const userDoc = await getDoc(targetUserRef);
+      const userData = userDoc.data() || {};
+      const currentSum = userData.totalRatingSum || 0;
+      const currentCount = userData.totalRatingCount || 0;
 
-      const postRef = doc(db, "posts", postId);
-      await updateDoc(postRef, {
-        averageRating: avg,
-        ratingCount: ratings.length,
-      });
-
-      setUserRating(value);
-      setAverageRating(avg);
-      setRatingCount(ratings.length);
-
-      // creates rating notification
-      if (post?.userId) {
-        await createNotification("rating", post.userId, { value });
+      // Prevent double rating
+      const existingRating = await getDoc(ratingDocRef);
+      if (existingRating.exists()) {
+        alert("You’ve already rated this user.");
+        return;
       }
+
+      // Save the rating
+      await setDoc(ratingDocRef, {
+        raterId: user.uid,
+        rating: value,
+        createdAt: serverTimestamp(),
+      });
+
+      // Update totals
+      await updateDoc(targetUserRef, {
+        totalRatingSum: currentSum + value,
+        totalRatingCount: currentCount + 1,
+      });
+
+      // create rating notification
+      await createNotification("rating", post.userId, { value });
+
+      alert(`You rated ${post.username} ${value} stars!`);
     } catch (error) {
       console.error("Error adding rating:", error);
     }
@@ -212,9 +216,10 @@ export default function ViewPost() {
       await addDoc(commentRef, {
         userId: user.uid,
         username: userData?.username || "Anonymous",
+        postUsername: post?.username || "Unknown",
         profilePhoto: userData?.profilePhoto || "",
         text: commentText,
-        createdAt: Timestamp.now(),
+        timestamp: new Date(),
       });
 
       setComments((prev) => [
@@ -222,6 +227,7 @@ export default function ViewPost() {
         {
           userId: user.uid,
           username: userData?.username || "Anonymous",
+          postUsername: post?.username || "Unknown",
           profilePhoto: userData?.profilePhoto || "",
           text: commentText,
           timestamp: new Date(),
@@ -230,7 +236,10 @@ export default function ViewPost() {
 
       // create comment notification
       if (post?.userId) {
-        await createNotification("comment", post.userId, { comment: commentText });
+        await createNotification("comment", post.userId, {
+          comment: commentText,
+          postUsername: post.username,
+        });
       }
 
       setCommentText("");
@@ -301,6 +310,12 @@ export default function ViewPost() {
         />
       )}
 
+      <RatingModal
+        isOpen={isRating}
+        onClose={() => setIsRating(false)}
+        onRate={handleRating}
+      />
+
       <div className="flex gap-3 items-center mb-5">
         <Link to="/home">
           <i className="bi bi-arrow-left cursor-pointer text-lg"></i>
@@ -328,16 +343,14 @@ export default function ViewPost() {
                   </Link>
                   <p className="text-[11px] text-gray-600">
                     {post.createdAt?.toDate
-                      ? post.createdAt
-                          .toDate()
-                          .toLocaleString("en-US", {
-                            year: "numeric",
-                            month: "short",
-                            day: "numeric",
-                            hour: "numeric",
-                            minute: "2-digit",
-                            hour12: true,
-                          })
+                      ? post.createdAt.toDate().toLocaleString("en-US", {
+                          year: "numeric",
+                          month: "short",
+                          day: "numeric",
+                          hour: "numeric",
+                          minute: "2-digit",
+                          hour12: true,
+                        })
                       : "Just now"}
                   </p>
                 </div>
@@ -419,10 +432,18 @@ export default function ViewPost() {
           </div>
 
           {/* Location */}
-          <div className="italic text-gray-400 text-sm">{address}</div>
+          <div className="text-sm text-gray-500 mt-2">
+            {post.location?.landmark && (
+              <p className="mt-1 text-gray-500 italic">
+                <span className="font-semibold ">Landmark:</span>{" "}
+                {post.location.landmark}
+              </p>
+            )}
+                        <p className="italic">{address}</p>
+          </div>
 
           {/* Like, Comment, Rate */}
-          <div className="flex flex-col xl:flex-row justify-between xl:justify-around px-2 text-md text-gray-500 font-medium border-t border-gray-200 pt-3 gap-2">
+          <div className="flex flex-row justify-between xl:justify-around px-2 text-md text-gray-500 font-medium border-t border-gray-200 pt-3 gap-2">
             <button
               onClick={handleLike}
               className="group cursor-pointer flex items-center gap-1"
@@ -445,33 +466,16 @@ export default function ViewPost() {
               </span>
             </button>
 
-            <div className="flex items-center gap-2 cursor-pointer hover:text-gray-700">
+            <div className="flex items-center gap-2 cursor-pointer hover:text-[#fbc02d]">
               <i className="bi bi-chat"></i>
-              <span>Comment</span>
+              <span className="xl:flex hidden">Comment</span>
             </div>
-
-            {/* rating section */}
-            <div className="flex flex-col items-center gap-1">
-              <div className="flex items-center gap-1">
-                {[1, 2, 3, 4, 5].map((value) => (
-                  <i
-                    key={value}
-                    className={`bi ${
-                      (hoverRating || userRating) >= value
-                        ? "bi-star-fill text-[#fbc02d]"
-                        : "bi-star text-gray-400"
-                    } cursor-pointer text-lg transition`}
-                    onMouseEnter={() => setHoverRating(value)}
-                    onMouseLeave={() => setHoverRating(0)}
-                    onClick={() => handleRating(value)}
-                  ></i>
-                ))}
-              </div>
-              <div className="text-xs text-gray-500">
-                {ratingCount > 0
-                  ? `⭐ ${averageRating.toFixed(1)} (${ratingCount})`
-                  : "No ratings yet"}
-              </div>
+            <div
+              className="flex items-center gap-2 cursor-pointer hover:text-[#fbc02d]"
+              onClick={() => setIsRating(true)}
+            >
+              <i class="bi bi-star-half"></i>
+              <span className="xl:flex hidden">Rate</span>
             </div>
           </div>
 
@@ -485,12 +489,13 @@ export default function ViewPost() {
                   className="w-8 h-8 rounded-full object-cover"
                 />
                 <div className="flex flex-col">
-                <div className="flex items-center gap-2">
-                  <span className="font-semibold text-sm">{comment.username}</span>
-<span className="text-xs text-gray-500 font-light">{comment.timestamp?.toDate
-                      ? comment.timestamp
-                          .toDate()
-                          .toLocaleString("en-US", {
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold text-sm">
+                      {comment.username}
+                    </span>
+                    <span className="text-xs text-gray-500 font-light">
+                      {comment.timestamp?.toDate
+                        ? comment.timestamp.toDate().toLocaleString("en-US", {
                             year: "numeric",
                             month: "short",
                             day: "numeric",
@@ -498,9 +503,10 @@ export default function ViewPost() {
                             minute: "2-digit",
                             hour12: true,
                           })
-                      : "Just now"}   </span> 
-                      </div>
-                                    <span className="text-gray-700 text-sm">{comment.text}</span>
+                        : "Just now"}{" "}
+                    </span>
+                  </div>
+                  <span className="text-gray-700 text-sm">{comment.text}</span>
                 </div>
               </div>
             ))}
@@ -510,11 +516,11 @@ export default function ViewPost() {
                 placeholder="Add a comment..."
                 value={commentText}
                 onChange={(e) => setCommentText(e.target.value)}
-                className="border border-gray-300 rounded-md px-2 py-1 flex-1"
+                className="border border-gray-300 rounded-md px-2 py-1 flex-1 focus:outline-none"
               />
               <button
                 onClick={handleAddComment}
-                className="bg-[#2e7d32] text-white px-3 rounded-md"
+                className="bg-[#2e7d32] text-white px-3 rounded-md cursor-pointer hover:bg-[rgb(28,79,39)] duration-200 ease-in"
               >
                 Post
               </button>

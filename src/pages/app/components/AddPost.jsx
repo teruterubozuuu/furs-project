@@ -98,10 +98,10 @@ const handleSubmit = async (e) => {
     return;
   }
 
-  const plainLocation =
-    location && location.lat && location.lng
-      ? { lat: location.lat, lng: location.lng }
-      : null;
+const plainLocation =
+  location && location.lat && location.lng
+    ? { lat: location.lat, lng: location.lng, landmark: location.landmark || "" }
+    : null;
 
   const reportData = {
     userId: user.uid,
@@ -285,13 +285,19 @@ const handleSubmit = async (e) => {
           </form>
 
           {isLocationModalOpen && (
-            <SelectLocation
-              onClose={() => setIsLocationModalOpen(false)}
-              onSelect={(selectedLocation) => {
-                if (selectedLocation) setLocation(selectedLocation);
-                setIsLocationModalOpen(false);
-              }}
-            />
+<SelectLocation
+  onClose={() => setIsLocationModalOpen(false)}
+  onSelect={(selectedLocation) => {
+    if (selectedLocation) {
+      setLocation({
+        lat: selectedLocation.lat,
+        lng: selectedLocation.lng,
+        landmark: selectedLocation.landmark || "",
+      });
+    }
+    setIsLocationModalOpen(false);
+  }}
+/>
           )}
         </div>
       </div>
