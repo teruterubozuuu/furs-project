@@ -1,51 +1,59 @@
-// ./components/EditPostModal.jsx
 import React, { useState, useEffect } from "react";
-
-// NOTE: You will need to import 'updateDoc' and 'doc' from Firebase in Home.jsx
+import {
+  Menu,
+  MenuButton,
+  MenuItem,
+  MenuItems,
+} from "@headlessui/react";
+import { ChevronDownIcon } from "@heroicons/react/20/solid";
 
 export default function EditPostModal({ isOpen, onClose, post, onUpdate }) {
-  // Only render if the modal is open and we have a post to edit
   if (!isOpen || !post) return null;
 
-  // Use local state to manage form inputs, initialized with current post data
-  const [description, setDescription] = useState(post.description || "");
-  const [color, setColor] = useState(post.color || "");
-  const [breed, setBreed] = useState(post.breed || "");
 
-  // Reset local state whenever the post changes (i.e., when modal opens for a new post)
+  const [description, setDescription] = useState(post.description || "");
+  const [breed, setBreed] = useState(post.breed || "");
+  const [selectedCoatColor, setSelectedCoatColor] = useState(post.coatColor || "Coat/Color");
+
+  const coatColors = [
+    "White",
+    "Black",
+    "Brown",
+    "Gray/Silver",
+    "Yellow/Golden",
+    "Bicolor Mixed",
+    "Tricolor Mixed",
+  ];
+
   useEffect(() => {
     setDescription(post.description || "");
-    setColor(post.color || "");
     setBreed(post.breed || "");
+    setSelectedCoatColor(post.coatColor || "Coat/Color");
   }, [post]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
 
-    // Prepare the updated data object
     const updatedData = {
-      description: description,
-      color: color,
-      breed: breed,
-      // Optionally update a 'lastUpdated' timestamp
-      lastUpdated: new Date(),
+      description: description.trim(),
+      coatColor: selectedCoatColor,
+      breed: breed.trim(),
+      lastUpdated: new Date(), 
     };
 
-    // Call the prop function provided by Home.jsx to handle Firestore update
     onUpdate(post.id, post.type, updatedData);
-    onClose(); // Close the modal after submission
+    onClose();
   };
 
   return (
-    // Basic Modal Structure (Tailwind/Vite styling based on your structure)
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white p-6 rounded-lg shadow-2xl max-w-md w-full">
-        <h2 className="text-xl font-semibold mb-4 border-b pb-2">
-          Edit Your Post ({post.type})
+    <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
+      <div className="bg-white p-6 rounded-xl shadow-2xl max-w-md w-full border border-gray-200">
+        <h2 className="text-xl font-semibold mb-4 border-b pb-2 text-gray-800">
+          Edit Post
         </h2>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Description Field */}
+          {/* Description */}
           <div>
             <label className="block text-sm font-medium text-gray-700">
               Description
@@ -53,27 +61,44 @@ export default function EditPostModal({ isOpen, onClose, post, onUpdate }) {
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
+              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-amber-400 focus:border-amber-400"
               rows="3"
+              placeholder="Enter description..."
               required
             />
           </div>
 
-          {/* Color Field */}
+          {/* Coat Color */}
           <div>
-            <label className="block text-sm font-medium text-gray-700">
-              Color
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Coat Color
             </label>
-            <input
-              type="text"
-              value={color}
-              onChange={(e) => setColor(e.target.value)}
-              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
-              required
-            />
+            <Menu as="div" className="relative w-full">
+              <MenuButton className="inline-flex justify-between items-center w-full border border-gray-300 rounded-md px-3 py-2 text-sm font-medium text-gray-700 hover:bg-amber-50 focus:ring-2 focus:ring-amber-400">
+                {selectedCoatColor}
+                <ChevronDownIcon className="w-5 h-5 text-amber-500" />
+              </MenuButton>
+              <MenuItems className="absolute left-0 z-10 mt-2 w-full max-h-40 overflow-y-auto rounded-md bg-white border border-gray-200 shadow-lg">
+                <div className="py-1">
+                  {coatColors.map((color) => (
+                    <MenuItem key={color}>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedCoatColor(color)}
+                        className={`block w-full text-left px-4 py-2 text-sm hover:bg-amber-50 ${
+                          selectedCoatColor === color ? "bg-amber-100 font-semibold" : ""
+                        }`}
+                      >
+                        {color}
+                      </button>
+                    </MenuItem>
+                  ))}
+                </div>
+              </MenuItems>
+            </Menu>
           </div>
 
-          {/* Breed Field */}
+          {/* Breed */}
           <div>
             <label className="block text-sm font-medium text-gray-700">
               Breed
@@ -82,7 +107,8 @@ export default function EditPostModal({ isOpen, onClose, post, onUpdate }) {
               type="text"
               value={breed}
               onChange={(e) => setBreed(e.target.value)}
-              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
+              placeholder="Enter breed..."
+              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-amber-400 focus:border-amber-400"
             />
           </div>
 
@@ -97,7 +123,7 @@ export default function EditPostModal({ isOpen, onClose, post, onUpdate }) {
             </button>
             <button
               type="submit"
-              className="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-700 transition"
+              className="px-4 py-2 text-sm font-medium text-white bg-amber-500 rounded-md hover:bg-amber-600 transition"
             >
               Save Changes
             </button>

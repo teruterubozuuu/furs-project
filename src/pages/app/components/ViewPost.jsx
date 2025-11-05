@@ -1,0 +1,529 @@
+import React, { useEffect, useState } from "react";
+import { useParams, Link } from "react-router-dom";
+import { db } from "../../../firebase/config";
+import {
+  doc,
+  getDoc,
+  updateDoc,
+  deleteDoc,
+  setDoc,
+  increment,
+  collection,
+  getDocs,
+  addDoc,
+  serverTimestamp,
+  Timestamp,
+} from "firebase/firestore";
+import { useAuth } from "../../../context/AuthContext";
+import defaultImg from "../../../assets/default_img.jpg";
+import EditPostModal from "./EditPostModal";
+
+export default function ViewPost() {
+  const { username, postId } = useParams();
+  const { user, userData } = useAuth();
+
+  const [post, setPost] = useState(null);
+  const [isOwner, setIsOwner] = useState(false);
+  const [isLikedByUser, setIsLikedByUser] = useState(false);
+  const [likesCount, setLikesCount] = useState(0);
+  const [address, setAddress] = useState("Loading location...");
+  const [openMenuId, setOpenMenuId] = useState(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [postToEdit, setPostToEdit] = useState(null);
+
+  const [userRating, setUserRating] = useState(0);
+  const [hoverRating, setHoverRating] = useState(0);
+  const [averageRating, setAverageRating] = useState(0);
+  const [ratingCount, setRatingCount] = useState(0);
+
+  const [commentText, setCommentText] = useState("");
+  const [comments, setComments] = useState([]);
+
+  // Fetch post data
+  useEffect(() => {
+    const fetchPost = async () => {
+      try {
+        const postRef = doc(db, "posts", postId);
+        const postSnap = await getDoc(postRef);
+
+        if (postSnap.exists()) {
+          const postData = postSnap.data();
+          setPost({ id: postSnap.id, ...postData });
+          setLikesCount(postData.likes || 0);
+          setIsOwner(user?.uid === postData.userId);
+          setAverageRating(postData.averageRating || 0);
+          setRatingCount(postData.ratingCount || 0);
+
+          if (user?.uid) {
+            const likeRef = doc(db, "posts", postId, "likes", user.uid);
+            const likeSnap = await getDoc(likeRef);
+            setIsLikedByUser(likeSnap.exists());
+
+            // fetches user rating
+            const ratingRef = doc(db, "posts", postId, "ratings", user.uid);
+            const ratingSnap = await getDoc(ratingRef);
+            if (ratingSnap.exists()) {
+              setUserRating(ratingSnap.data().value);
+            }
+          }
+
+          if (postData.location?.lat && postData.location?.lng) {
+            try {
+              const res = await fetch(
+                `https://nominatim.openstreetmap.org/reverse?lat=${postData.location.lat}&lon=${postData.location.lng}&format=json&accept-language=en`
+              );
+              const json = await res.json();
+              setAddress(json.display_name || "Address not found");
+            } catch {
+              setAddress("Address unavailable");
+            }
+          } else {
+            setAddress("No location provided");
+          }
+        } else {
+          console.log("No such post!");
+        }
+      } catch (error) {
+        console.error("Error fetching post:", error);
+      }
+    };
+
+    fetchPost();
+  }, [postId, user?.uid]);
+
+  // fetch comments
+  useEffect(() => {
+    const fetchComments = async () => {
+      try {
+        const commentsSnap = await getDocs(collection(db, "posts", postId, "comments"));
+        setComments(commentsSnap.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
+      } catch (error) {
+        console.error("Error fetching comments:", error);
+      }
+    };
+    fetchComments();
+  }, [postId]);
+
+  // creates a notification
+  const createNotification = async (type, postOwnerId, extraData = {}) => {
+    if (user.uid === postOwnerId) return; // prevents self-notification
+
+    try {
+      const notifRef = collection(db, "users", postOwnerId, "notifications");
+      await addDoc(notifRef, {
+        senderId: user.uid,
+        senderName: userData?.username || "Someone",
+        senderPhoto: userData?.profilePhoto || "",
+        postId,
+        postDescription: post?.description?.slice(0, 80) || "",
+        type,
+        value: extraData.value || null, // for rating stars
+        comment: extraData.comment || null, // for comment text
+        timestamp: serverTimestamp(),
+        read: false,
+      });
+    } catch (error) {
+      console.error("Error creating notification:", error);
+    }
+  };
+
+  // Like/Unlike post
+  const handleLike = async () => {
+    if (!user) {
+      alert("Please log in to like posts.");
+      return;
+    }
+
+    const postRef = doc(db, "posts", postId);
+    const likeRef = doc(db, "posts", postId, "likes", user.uid);
+
+    try {
+      const likeSnap = await getDoc(likeRef);
+      if (likeSnap.exists()) {
+        await deleteDoc(likeRef);
+        await updateDoc(postRef, { likes: increment(-1) });
+        setIsLikedByUser(false);
+        setLikesCount((prev) => prev - 1);
+      } else {
+        await setDoc(likeRef, { userId: user.uid, timestamp: new Date() });
+        await updateDoc(postRef, { likes: increment(1) });
+        setIsLikedByUser(true);
+        setLikesCount((prev) => prev + 1);
+
+        // create like notification
+        if (post?.userId) {
+          await createNotification("like", post.userId);
+        }
+      }
+    } catch (error) {
+      console.error("Error toggling like:", error);
+    }
+  };
+
+  // handles rating
+  const handleRating = async (value) => {
+    if (!user) {
+      alert("Please log in to rate posts.");
+      return;
+    }
+
+    try {
+      const ratingRef = doc(db, "posts", postId, "ratings", user.uid);
+      await setDoc(ratingRef, {
+        value,
+        userId: user.uid,
+        timestamp: new Date(),
+      });
+
+      // Recalculate average
+      const ratingsSnap = await getDocs(collection(db, "posts", postId, "ratings"));
+      const ratings = ratingsSnap.docs.map((d) => d.data().value);
+      const avg = ratings.reduce((a, b) => a + b, 0) / ratings.length;
+
+      const postRef = doc(db, "posts", postId);
+      await updateDoc(postRef, {
+        averageRating: avg,
+        ratingCount: ratings.length,
+      });
+
+      setUserRating(value);
+      setAverageRating(avg);
+      setRatingCount(ratings.length);
+
+      // creates rating notification
+      if (post?.userId) {
+        await createNotification("rating", post.userId, { value });
+      }
+    } catch (error) {
+      console.error("Error adding rating:", error);
+    }
+  };
+
+  // Add comment
+  const handleAddComment = async () => {
+    if (!user) {
+      alert("Please log in to comment.");
+      return;
+    }
+    if (!commentText.trim()) return;
+
+    try {
+      const commentRef = collection(db, "posts", postId, "comments");
+      await addDoc(commentRef, {
+        userId: user.uid,
+        username: userData?.username || "Anonymous",
+        profilePhoto: userData?.profilePhoto || "",
+        text: commentText,
+        createdAt: Timestamp.now(),
+      });
+
+      setComments((prev) => [
+        ...prev,
+        {
+          userId: user.uid,
+          username: userData?.username || "Anonymous",
+          profilePhoto: userData?.profilePhoto || "",
+          text: commentText,
+          timestamp: new Date(),
+        },
+      ]);
+
+      // create comment notification
+      if (post?.userId) {
+        await createNotification("comment", post.userId, { comment: commentText });
+      }
+
+      setCommentText("");
+    } catch (error) {
+      console.error("Error adding comment:", error);
+    }
+  };
+
+  const getCollectionName = (postType) => {
+    switch (postType) {
+      case "Lost Pet":
+        return "lostPets";
+      case "Stray Animal":
+        return "strayAnimals";
+      case "Adoption":
+        return "adoptions";
+      default:
+        return "posts";
+    }
+  };
+
+  const handleEditPost = (post) => {
+    setPostToEdit(post);
+    setIsEditing(true);
+  };
+
+  const handleUpdatePost = async (postId, postType, updatedData) => {
+    const collectionName = getCollectionName(postType);
+    if (!postId) {
+      alert("Error: Missing post ID.");
+      return;
+    }
+
+    try {
+      const postRef = doc(db, collectionName, postId);
+      await updateDoc(postRef, updatedData);
+      setPost((prev) => ({ ...prev, ...updatedData }));
+    } catch (error) {
+      console.error("Error updating post:", error);
+      alert("Failed to update post. Please try again.");
+    }
+  };
+
+  const handleDeletePost = async (postId, postType) => {
+    if (!window.confirm("Are you sure you want to delete this post?")) return;
+    const collectionName = getCollectionName(postType);
+    try {
+      const postRef = doc(db, collectionName, postId);
+      await deleteDoc(postRef);
+      alert("Post deleted successfully!");
+    } catch (error) {
+      console.error("Error deleting post:", error);
+      alert("Failed to delete post. Please try again.");
+    }
+  };
+
+  const profilePath =
+    post?.userId === user?.uid ? "/profile" : `/profile/${post?.userId}`;
+
+  return (
+    <div className="xl:min-w-[650px] border border-gray-200 bg-white rounded-lg p-7">
+      {isEditing && postToEdit && (
+        <EditPostModal
+          isOpen={isEditing}
+          onClose={() => setIsEditing(false)}
+          post={postToEdit}
+          onUpdate={handleUpdatePost}
+        />
+      )}
+
+      <div className="flex gap-3 items-center mb-5">
+        <Link to="/home">
+          <i className="bi bi-arrow-left cursor-pointer text-lg"></i>
+        </Link>
+        <h1 className="text-xl font-semibold">Post</h1>
+      </div>
+
+      {post ? (
+        <div className="flex flex-col gap-2">
+          {/* Header */}
+          <div className="flex justify-between items-start pb-2">
+            <div className="flex h-full items-center">
+              <img
+                src={post.userPhoto || defaultImg}
+                alt="Profile"
+                className="w-14 h-14 rounded-full object-cover"
+              />
+              <div className="pl-2">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <Link
+                    to={profilePath}
+                    className="text-base font-semibold hover:underline cursor-pointer"
+                  >
+                    {post.username}
+                  </Link>
+                  <p className="text-[11px] text-gray-600">
+                    {post.createdAt?.toDate
+                      ? post.createdAt
+                          .toDate()
+                          .toLocaleString("en-US", {
+                            year: "numeric",
+                            month: "short",
+                            day: "numeric",
+                            hour: "numeric",
+                            minute: "2-digit",
+                            hour12: true,
+                          })
+                      : "Just now"}
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <span
+                    className={`text-xs p-1 border rounded-sm ${
+                      post.status === "Stray Animal"
+                        ? "bg-red-100 text-red-700 border-red-300"
+                        : post.status === "Lost Pet"
+                        ? "bg-yellow-100 text-yellow-700 border-yellow-300"
+                        : "bg-gray-100 text-gray-700 border-gray-300"
+                    }`}
+                  >
+                    {post.status}
+                  </span>
+
+                  <div className="flex py-1 gap-2">
+                    {post.coatColor && (
+                      <span className="text-xs p-1 border bg-green-100 text-green-700 border-green-300 rounded-sm">
+                        {post.coatColor}
+                      </span>
+                    )}
+                    {post.breed && (
+                      <span className="text-xs p-1 border bg-green-100 text-green-700 border-green-300 rounded-sm">
+                        {post.breed}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {isOwner && (
+              <div className="relative flex flex-col items-end">
+                <i
+                  onClick={() =>
+                    setOpenMenuId(openMenuId === post.id ? null : post.id)
+                  }
+                  className="cursor-pointer bi bi-three-dots text-gray-500 hover:text-gray-700 font-medium text-lg"
+                ></i>
+
+                {openMenuId === post.id && (
+                  <div className="flex flex-col items-start border border-gray-200 bg-white w-[80px] rounded-md absolute top-5 right-0 z-10 shadow-sm">
+                    <button
+                      onClick={() => {
+                        handleEditPost(post);
+                        setOpenMenuId(null);
+                      }}
+                      className="cursor-pointer text-xs text-start pl-3 text-gray-600 w-full hover:bg-gray-200 py-2"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => {
+                        handleDeletePost(post.id, post.type);
+                        setOpenMenuId(null);
+                      }}
+                      className="cursor-pointer text-xs text-start pl-3 text-gray-600 w-full hover:bg-gray-200 py-2"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Description */}
+          <p className="text-gray-700">{post.description}</p>
+
+          {/* Photo */}
+          <div className="flex justify-center p-3">
+            <img
+              src={post.photoURL}
+              alt="Posted"
+              className="w-100 rounded-sm object-cover"
+            />
+          </div>
+
+          {/* Location */}
+          <div className="italic text-gray-400 text-sm">{address}</div>
+
+          {/* Like, Comment, Rate */}
+          <div className="flex flex-col xl:flex-row justify-between xl:justify-around px-2 text-md text-gray-500 font-medium border-t border-gray-200 pt-3 gap-2">
+            <button
+              onClick={handleLike}
+              className="group cursor-pointer flex items-center gap-1"
+            >
+              <i
+                className={`bi ${
+                  isLikedByUser
+                    ? "bi-hand-thumbs-up-fill text-[#fbc02d]"
+                    : "bi-hand-thumbs-up text-gray-500 group-hover:text-[#fbc02d]"
+                }`}
+              ></i>
+              <span
+                className={`ml-2 font-medium ${
+                  isLikedByUser
+                    ? "text-[#fbc02d]"
+                    : "text-gray-500 group-hover:text-[#fbc02d]"
+                }`}
+              >
+                {likesCount > 0 ? likesCount : "Like"}
+              </span>
+            </button>
+
+            <div className="flex items-center gap-2 cursor-pointer hover:text-gray-700">
+              <i className="bi bi-chat"></i>
+              <span>Comment</span>
+            </div>
+
+            {/* rating section */}
+            <div className="flex flex-col items-center gap-1">
+              <div className="flex items-center gap-1">
+                {[1, 2, 3, 4, 5].map((value) => (
+                  <i
+                    key={value}
+                    className={`bi ${
+                      (hoverRating || userRating) >= value
+                        ? "bi-star-fill text-[#fbc02d]"
+                        : "bi-star text-gray-400"
+                    } cursor-pointer text-lg transition`}
+                    onMouseEnter={() => setHoverRating(value)}
+                    onMouseLeave={() => setHoverRating(0)}
+                    onClick={() => handleRating(value)}
+                  ></i>
+                ))}
+              </div>
+              <div className="text-xs text-gray-500">
+                {ratingCount > 0
+                  ? `⭐ ${averageRating.toFixed(1)} (${ratingCount})`
+                  : "No ratings yet"}
+              </div>
+            </div>
+          </div>
+
+          {/* comments section */}
+          <div className="mt-4 flex flex-col gap-2">
+            {comments.map((comment) => (
+              <div key={comment.id} className="flex items-start gap-2">
+                <img
+                  src={comment.profilePhoto || defaultImg}
+                  alt="Profile"
+                  className="w-8 h-8 rounded-full object-cover"
+                />
+                <div className="flex flex-col">
+                <div className="flex items-center gap-2">
+                  <span className="font-semibold text-sm">{comment.username}</span>
+<span className="text-xs text-gray-500 font-light">{comment.timestamp?.toDate
+                      ? comment.timestamp
+                          .toDate()
+                          .toLocaleString("en-US", {
+                            year: "numeric",
+                            month: "short",
+                            day: "numeric",
+                            hour: "numeric",
+                            minute: "2-digit",
+                            hour12: true,
+                          })
+                      : "Just now"}   </span> 
+                      </div>
+                                    <span className="text-gray-700 text-sm">{comment.text}</span>
+                </div>
+              </div>
+            ))}
+            <div className="flex gap-2 mt-2">
+              <input
+                type="text"
+                placeholder="Add a comment..."
+                value={commentText}
+                onChange={(e) => setCommentText(e.target.value)}
+                className="border border-gray-300 rounded-md px-2 py-1 flex-1"
+              />
+              <button
+                onClick={handleAddComment}
+                className="bg-[#2e7d32] text-white px-3 rounded-md"
+              >
+                Post
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <p className="text-gray-500">Loading post...</p>
+      )}
+    </div>
+  );
+}
