@@ -1,10 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
-// CORRECT IMPORT 1: Import the initialized database instance
 import { db } from "../../firebase/config";
-
-// 🚨 CORRECT IMPORT 2: Import all necessary functions directly from the Firebase SDK.
 import {
   collection,
   query,
@@ -13,10 +10,9 @@ import {
   getDoc,
   deleteDoc,
   updateDoc,
-  onSnapshot, // for real-time updates
-  // 🚨 FIX: These specialized methods must be imported from the SDK
-  arrayUnion,
-  arrayRemove,
+  onSnapshot,
+  increment,
+  setDoc,
 } from "firebase/firestore";
 
 import AddPost from "./components/AddPost";
@@ -28,12 +24,10 @@ import { useAuth } from "../../context/AuthContext";
 import {doc,getDoc} from "firebase/firestore"
 
 
-// Helper function to determine the Firestore collection name based on post type
 const getCollectionName = (postType) => {
   if (postType === "Stray Animal") return "stray_animal_posts";
   if (postType === "Lost Pet") return "lost_pet_posts";
   if (postType === "Unknown") return "unknown_status";
-  // fallback for general posts collection to match AddPost.jsx
   return "posts";
 };
 
@@ -43,67 +37,78 @@ export default function Home() {
   const [isOpenFilter, setIsOpenFilter] = useState(false);
   const [posts, setPosts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [postMenu, setPostMenu] = useState(false);
   const [openMenuId, setOpenMenuId] = useState(null);
-
   const [isEditing, setIsEditing] = useState(false);
   const [postToEdit, setPostToEdit] = useState(null);
 
-  // 🚨 NEW STATE: To hold the logged-in user's current profile data
   const [currentUserProfile, setCurrentUserProfile] = useState({
     photoURL: defaultImg,
     username: user?.displayName || "Guest",
   });
 
-  // ------------------------------------------
-  // 🚨 1. FETCH CURRENT USER PROFILE DATA
-  // This runs once to load the latest photo/username.
-  // ------------------------------------------
+  const [filters, setFilters] = useState({
+    reportType: "",
+    selectedColors: [],
+  });
+
+  const handleLike = async (postId, postType) => {
+    if (!user) {
+      alert("Please log in to like posts.");
+      return;
+    }
+
+    const collectionName = getCollectionName(postType);
+    const postRef = doc(db, collectionName, postId);
+    const likeRef = doc(db, collectionName, postId, "likes", user.uid);
+
+    try {
+      const likeSnap = await getDoc(likeRef);
+
+      if (likeSnap.exists()) {
+        await deleteDoc(likeRef);
+        await updateDoc(postRef, { likes: increment(-1) });
+
+        setPosts((prev) =>
+          prev.map((p) =>
+            p.id === postId
+              ? { ...p, likes: (p.likes || 1) - 1, isLikedByUser: false }
+              : p
+          )
+        );
+      } else {
+        await setDoc(likeRef, { userId: user.uid, timestamp: new Date() });
+        await updateDoc(postRef, { likes: increment(1) });
+
+        setPosts((prev) =>
+          prev.map((p) =>
+            p.id === postId
+              ? { ...p, likes: (p.likes || 0) + 1, isLikedByUser: true }
+              : p
+          )
+        );
+      }
+    } catch (error) {
+      console.error("Error toggling like:", error);
+    }
+  };
+
+  const handleApplyFilter = ({ reportType, selectedColors }) => {
+    setFilters({ reportType, selectedColors });
+  };
+
+  // 1. FETCH CURRENT USER PROFILE DATA
   useEffect(() => {
     const fetchUserProfile = async () => {
       if (!user?.uid) return;
 
       try {
-        const strayRef = collection(db, "stray_animal_posts");
-        const lostRef = collection(db, "lost_pet_posts");
-        const unknownRef = collection(db, "unknown_status");
-
-        const [straySnap, lostSnap, unknownSnap] = await Promise.all([
-          getDocs(query(strayRef, orderBy("createdAt", "desc"))),
-          getDocs(query(lostRef, orderBy("createdAt", "desc"))),
-          getDocs(query(unknownRef, orderBy("createdAt", "desc"))),
-        ]);
-
-        const strayPosts = straySnap.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-          type: "Stray",
-        }));
-
-        const lostPosts = lostSnap.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-          type: "Lost",
-        }));
-
-        const unknownPosts = unknownSnap.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-          type: "Unknown",
-        }));
-
-        const combined = [...strayPosts, ...lostPosts, ...unknownPosts].sort(
-          (a, b) => {
-            const aDate = a.createdAt?.toDate?.() || new Date(0);
-            const bDate = b.createdAt?.toDate?.() || new Date(0);
-            return bDate - aDate;
-          }
-        );
-
-        const userDoc = await getDoc(doc(db,"users", user.uid));
+        const userDoc = await getDoc(doc(db, "users", user.uid));
         if (userDoc.exists()) {
           const data = userDoc.data();
-          setUserType(data.userType || "");
+          setCurrentUserProfile({
+            photoURL: data.profilePhoto || defaultImg,
+            username: data.username || user.displayName,
+          });
         }
 
 
@@ -132,11 +137,9 @@ export default function Home() {
     };
 
     fetchUserProfile();
-  }, [user]); // Reruns when the user object initializes
+  }, [user]);
 
-  // ------------------------------------------
   // 2. EDIT/UPDATE FUNCTIONALITY
-  // ------------------------------------------
   const handleEditPost = (post) => {
     setPostToEdit(post);
     setIsEditing(true);
@@ -153,7 +156,6 @@ export default function Home() {
       const postRef = doc(db, collectionName, postId);
       await updateDoc(postRef, updatedData);
 
-      // Update the local state (UI) immediately
       setPosts((prevPosts) =>
         prevPosts.map((post) =>
           post.id === postId ? { ...post, ...updatedData } : post
@@ -166,9 +168,7 @@ export default function Home() {
     }
   };
 
-  // ------------------------------------------
   // 3. DELETE FUNCTIONALITY
-  // ------------------------------------------
   const handleDeletePost = async (postId, postType) => {
     if (!window.confirm("Are you sure you want to delete this post?")) {
       return;
@@ -184,7 +184,6 @@ export default function Home() {
       const postRef = doc(db, collectionName, postId);
       await deleteDoc(postRef);
 
-      // Update the local state (UI)
       setPosts((prevPosts) => prevPosts.filter((post) => post.id !== postId));
       console.log(
         `Post ${postId} deleted successfully from ${collectionName}.`
@@ -195,13 +194,10 @@ export default function Home() {
     }
   };
 
-  // ------------------------------------------
-  // 4. FETCH ALL POSTS (FEED CONTENT) - NOW REAL-TIME
-  // ------------------------------------------
+  // 4. FETCH ALL POSTS (FEED CONTENT)
   useEffect(() => {
     setIsLoading(true);
 
-    // include the "posts" collection where AddPost.jsx saves
     const postsRef = collection(db, "posts");
 
     const unsubPosts = onSnapshot(
@@ -209,36 +205,45 @@ export default function Home() {
       (snapshot) => handleSnapshot(snapshot, "General")
     );
 
-    // Cleanup listeners
     return () => {
       unsubPosts();
     };
   }, []);
 
-  // ------------------------------------------
   // 5. HELPER: Handle snapshot updates
-  // ------------------------------------------
   const handleSnapshot = async (snapshot, type) => {
     const newPosts = await Promise.all(
       snapshot.docs.map(async (docSnap) => {
         const data = docSnap.data();
+        let isLikedByUser = false;
+
+        if (user?.uid) {
+          const likeRef = doc(db, "posts", docSnap.id, "likes", user.uid);
+          const likeSnap = await getDoc(likeRef);
+          isLikedByUser = likeSnap.exists();
+        }
+
+        let address = "No coordinates";
+
         if (data.location?.lat && data.location?.lng) {
           try {
             const res = await fetch(
               `https://nominatim.openstreetmap.org/reverse?lat=${data.location.lat}&lon=${data.location.lng}&format=json&accept-language=en`
             );
             const json = await res.json();
-            return {
-              id: docSnap.id,
-              ...data,
-              type,
-              address: json.display_name || "Address not found",
-            };
+            address = json.display_name || "Address not found";
           } catch {
-            return { id: docSnap.id, ...data, type, address: "Address error" };
+            address = "Address error";
           }
         }
-        return { id: docSnap.id, ...data, type, address: "No coordinates" };
+
+        return {
+          id: docSnap.id,
+          ...data,
+          type,
+          address,
+          isLikedByUser,
+        };
       })
     );
 
@@ -262,7 +267,6 @@ export default function Home() {
       {userType !== "" && (
         <div className={userType === "Rescuer" ? "hidden" : "flex-1 flex flex-wrap sm:flex-nowrap items-center gap-3 p-4 rounded-sm border border-gray-200 shadow-sm bg-[#fafafa]"}>
           <img
-            // 🚨 UPDATED: Use the fetched profile photo URL
             src={currentUserProfile.photoURL}
             alt="User profile picture"
             className="w-8 h-auto rounded-full object-cover flex-shrink-0"
@@ -288,7 +292,11 @@ export default function Home() {
         </div>
       </div>
 
-      <Filter isOpen={isOpenFilter} onClose={() => setIsOpenFilter(false)} />
+      <Filter
+        isOpen={isOpenFilter}
+        onClose={() => setIsOpenFilter(false)}
+        onApply={handleApplyFilter}
+      />
       <AddPost isOpen={isOpenPost} onClose={() => setIsOpenPost(false)} />
 
       {/*POST*/}
@@ -296,175 +304,229 @@ export default function Home() {
         <div className="flex justify-center py-10 xl:w-[700px]">
           <OrbitProgress color="#2e7d32" size="large" />
         </div>
-      ) : posts.length === 0 ? (
-        <div className="flex w-[650px] justify-center text-gray-500 italic font-medium text-xl mt-5">
-          <p>No posts yet...</p>
-        </div>
       ) : (
-        posts.map((post) => {
-          const profilePath =
-            post.userId === user?.uid ? "/profile" : `/profile/${post.userId}`;
+        (() => {
+          // Filter logic
+          const filteredPosts = posts.filter((post) => {
+            const matchesReportType =
+              !filters.reportType ||
+              filters.reportType === "All" ||
+              post.status === filters.reportType;
 
-          const isOwner = user?.uid === post.userId;
+            const matchesColor =
+              filters.selectedColors.length === 0 ||
+              filters.selectedColors.includes(post.coatColor);
 
-          return (
-            <div
-              key={post.id}
-              className=" bg-[#fafafa] border border-gray-200 shadow-sm p-5 rounded-lg text-sm"
-            >
-              {/* Post header */}
-              <div className="border-b border-gray-200">
-                <div className="flex justify-between items-start pb-2">
-                  <div className="flex h-full items-center">
-                    {/* 🚨 FIX: Post Avatar */}
-                    <img
-                      src={
-                        isOwner
-                          ? currentUserProfile.photoURL
-                          : post.userPhoto || defaultImg
-                      }
-                      alt="Profile"
-                      className="w-14 h-14 rounded-full object-cover"
-                    />
+            return matchesReportType && matchesColor;
+          });
 
-                    <div className="pl-2">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <Link
-                          to={profilePath}
-                          className="text-base font-semibold hover:underline cursor-pointer"
-                        >
-                          {/* 🚨 FIX: Post Username */}
-                          {isOwner
-                            ? currentUserProfile.username
-                            : post.username}
-                        </Link>
-                        <p className="text-[11px] text-gray-600">
-                          {post.createdAt?.toDate
-                            ? post.createdAt.toDate().toLocaleString("en-US", {
-                                year: "numeric",
-                                month: "short",
-                                day: "numeric",
-                                hour: "numeric",
-                                minute: "2-digit",
-                                hour12: true,
-                              })
-                            : "Just now"}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span
-                          className={`text-xs p-1 border rounded-sm ${
-                            post.status === "Stray Animal"
-                              ? "bg-red-100 text-red-700 border-red-300"
-                              : post.status === "Lost Pet"
-                              ? "bg-yellow-100 text-yellow-700 border-yellow-300"
-                              : "bg-gray-100 text-gray-700 border-gray-300"
-                          }`}
-                        >
-                          {post.status}
-                        </span>
-                        {/* Dog characteristics */}
-                        <div className="flex py-1 gap-2">
-                          <span className="text-xs p-1 border bg-green-100 text-green-700 border-green-300 rounded-sm">
-                            {post.coatColor}
+          if (filteredPosts.length === 0) {
+            return (
+              <div className="flex w-[650px] justify-center text-gray-500 italic font-medium text-xl mt-5">
+                <p>No matching posts...</p>
+              </div>
+            );
+          }
+
+          return filteredPosts.map((post) => {
+            const profilePath =
+              post.userId === user?.uid
+                ? "/profile"
+                : `/profile/${post.userId}`;
+            const isOwner = user?.uid === post.userId;
+
+            return (
+              <Link
+                key={post.id}
+               to={`/${post.username}/status/${post.id}`}
+               >
+               <div
+                className="mb-3 bg-[#fafafa] border border-gray-200 shadow-sm p-5 rounded-lg text-sm cursor-pointer"
+              >
+                {/* Post header */}
+                <div className="border-b border-gray-200">
+                  <div className="flex justify-between items-start pb-2">
+                    <div className="flex h-full items-center">
+                      {/* 🚨 FIX: Post Avatar */}
+                      <img
+                        src={
+                          isOwner
+                            ? currentUserProfile.photoURL
+                            : post.userPhoto || defaultImg
+                        }
+                        alt="Profile"
+                        className="w-14 h-14 rounded-full object-cover"
+                      />
+
+                      <div className="pl-2">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <Link
+                            to={profilePath}
+                            className="text-base font-semibold hover:underline cursor-pointer"
+                          >
+                            {/* 🚨 FIX: Post Username */}
+                            {isOwner
+                              ? currentUserProfile.username
+                              : post.username}
+                          </Link>
+                          <p className="text-[11px] text-gray-600">
+                            {post.createdAt?.toDate
+                              ? post.createdAt
+                                  .toDate()
+                                  .toLocaleString("en-US", {
+                                    year: "numeric",
+                                    month: "short",
+                                    day: "numeric",
+                                    hour: "numeric",
+                                    minute: "2-digit",
+                                    hour12: true,
+                                  })
+                              : "Just now"}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span
+                            className={`text-xs p-1 border rounded-sm ${
+                              post.status === "Stray Animal"
+                                ? "bg-red-100 text-red-700 border-red-300"
+                                : post.status === "Lost Pet"
+                                ? "bg-yellow-100 text-yellow-700 border-yellow-300"
+                                : "bg-gray-100 text-gray-700 border-gray-300"
+                            }`}
+                          >
+                            {post.status}
                           </span>
-
-                          {post.breed && (
+                          {/* Dog characteristics */}
+                          <div className="flex py-1 gap-2">
                             <span className="text-xs p-1 border bg-green-100 text-green-700 border-green-300 rounded-sm">
-                              {post.breed}
+                              {post.coatColor}
                             </span>
-                          )}
+
+                            {post.breed && (
+                              <span className="text-xs p-1 border bg-green-100 text-green-700 border-green-300 rounded-sm">
+                                {post.breed}
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
 
-                  {/* Edit/Delete Buttons */}
-                  <div>
-                    {isOwner && (
-                      <div className="relative flex flex-col items-end">
-                        {/* Post Menu */}
+                    {/* Edit/Delete Buttons */}
+                    <div>
+                      {isOwner && (
                         <div className="relative flex flex-col items-end">
-                          {/* Post Menu Button */}
-                          <i
-                            onClick={() =>
-                              setOpenMenuId(
-                                openMenuId === post.id ? null : post.id
-                              )
-                            }
-                            className="cursor-pointer bi bi-three-dots text-gray-500 hover:text-gray-700 font-medium transition duration-150 ease-in-out text-lg flex justify-end"
-                          ></i>
+                          {/* Post Menu */}
+                          <div className="relative flex flex-col items-end">
+                            {/* Post Menu Button */}
+                            <i
+                              onClick={(e) =>{
+                                e.preventDefault();
+                                e.stopPropagation();
+                                setOpenMenuId(
+                                  openMenuId === post.id ? null : post.id
+                                )
+                              }}
+                              className="cursor-pointer bi bi-three-dots text-gray-500 hover:text-gray-700 font-medium transition duration-150 ease-in-out text-lg flex justify-end"
+                            ></i>
 
-                          {/* Dropdown Menu */}
-                          {openMenuId === post.id && (
-                            <div className="flex flex-col items-start border border-gray-200 bg-white w-[80px] rounded-md absolute top-5 right-0 z-10 shadow-sm">
-                              <button
-                                onClick={() => {
-                                  handleEditPost(post);
-                                  setOpenMenuId(null);
-                                }}
-                                className="cursor-pointer text-xs text-start pl-3 text-gray-600 w-full hover:bg-gray-200 transition duration-150 ease-in-out py-2"
-                              >
-                                Edit
-                              </button>
-                              <button
-                                onClick={() => {
-                                  handleDeletePost(post.id, post.type);
-                                  setOpenMenuId(null);
-                                }}
-                                className="cursor-pointer text-xs text-start pl-3 text-gray-600 w-full hover:bg-gray-200 transition duration-150 ease-in-out py-2"
-                              >
-                                Delete
-                              </button>
-                            </div>
-                          )}
+                            {/* Dropdown Menu */}
+                            {openMenuId === post.id && (
+                              <div className="flex flex-col items-start border border-gray-200 bg-white w-[80px] rounded-md absolute top-5 right-0 z-10 shadow-sm">
+                                <button
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    handleEditPost(post);
+                                    setOpenMenuId(null);
+                                  }}
+                                  className="cursor-pointer text-xs text-start pl-3 text-gray-600 w-full hover:bg-gray-200 transition duration-150 ease-in-out py-2"
+                                >
+                                  Edit
+                                </button>
+                                <button
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    handleDeletePost(post.id, post.type);
+                                    setOpenMenuId(null);
+                                  }}
+                                  className="cursor-pointer text-xs text-start pl-3 text-gray-600 w-full hover:bg-gray-200 transition duration-150 ease-in-out py-2"
+                                >
+                                  Delete
+                                </button>
+                              </div>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    )}
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Description */}
+                  <p>{post.description}</p>
+
+                  {/* Photo */}
+                  <div className="flex justify-center p-3">
+                    <img
+                      src={post.photoURL}
+                      alt="Posted"
+                      className="w-100 rounded-sm"
+                    />
+                  </div>
+
+                  {/* Location */}
+                  <div className="py-1 italic text-gray-400 text-sm">
+                    {post.address
+                      ? post.address
+                      : post.location
+                      ? `Latitude: ${post.location.lat.toFixed(
+                          5
+                        )}, Longitude: ${post.location.lng.toFixed(5)}`
+                      : "Location not available"}
                   </div>
                 </div>
 
-                {/* Description */}
-                <p>{post.description}</p>
+                <div className="flex flex-1 justify-between xl:justify-around px-2 pt-3 text-md text-gray-500 font-medium">
+                  <button
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      handleLike(post.id, post.type);
+                    }}
+                    className="group cursor-pointer flex items-center gap-1"
+                  >
 
-                {/* Photo */}
-                <div className="flex justify-center p-3">
-                  <img
-                    src={post.photoURL}
-                    alt="Posted"
-                    className="w-100 rounded-sm"
-                  />
-                </div>
+                    <i
+                      className={`bi ${
+                        post.isLikedByUser
+                          ? "bi-hand-thumbs-up-fill text-[#fbc02d]"
+                          : "bi-hand-thumbs-up text-gray-500 group-hover:text-[#fbc02d] transition-all ease-in"
+                      }`}
+                    ></i>
+                    <span
+                      className={`ml-2 font-medium  ${
+                        post.isLikedByUser ? "text-[#fbc02d]" : "text-gray-500 group-hover:text-[#fbc02d] transition-all ease-in"
+                      }`}
+                    >
+                      {post.likes > 0 ? post.likes : "Like"}
+                    </span>
+                  </button>
 
-                {/* Location */}
-                <div className="py-1 italic text-gray-400 text-sm">
-                  {post.address
-                    ? post.address
-                    : post.location
-                    ? `Latitude: ${post.location.lat.toFixed(
-                        5
-                      )}, Longitude: ${post.location.lng.toFixed(5)}`
-                    : "Location not available"}
+                  <div className="flex items-center gap-2">
+                    <i className="bi bi-chat"></i>
+                    <span>Comment</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <i class="bi bi-star-half"></i>
+                    <span>Rate</span>
+                  </div>
                 </div>
-              </div>
-
-              <div className="flex flex-1 justify-between xl:justify-around px-2 pt-3 text-sm text-gray-500 font-medium">
-                <div className="flex items-center gap-2">
-                  <i className="bi bi-hand-thumbs-up"></i>
-                  <p>Like</p>
                 </div>
-                <div className="flex items-center gap-2">
-                  <i className="bi bi-chat"></i>
-                  <p>Comment</p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <i className="bi bi-arrow-90deg-right"></i>
-                  <p>Repost</p>
-                </div>
-              </div>
-            </div>
-          );
-        })
+              </Link>
+            );
+          });
+        })()
       )}
     </div>
   );

@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from "react";
-// Ensure you have all necessary Firestore/Storage imports
 import { storage, db, auth } from "../../firebase/config";
 import {
   doc,
@@ -22,7 +21,7 @@ import "react-confirm-alert/src/react-confirm-alert.css";
 import { signOut } from "firebase/auth";
 import { useNavigate, useParams } from "react-router-dom";
 
-// --- Star Icon Helper Component ---
+//Star Icon Helper Component
 const StarRatingDisplay = ({ rating, count }) => {
   // Round rating to the nearest half for display
   const roundedRating = Math.round(rating * 2) / 2;
@@ -57,7 +56,7 @@ const StarRatingDisplay = ({ rating, count }) => {
   );
 };
 
-// --- Post Card Component (Assuming defined locally) ---
+// Post Card Component 
 const PostCard = ({ post }) => (
   <div className="border border-gray-200 p-4 rounded-lg shadow-sm bg-white space-y-3">
      {" "}
@@ -105,7 +104,7 @@ const PostCard = ({ post }) => (
     {" "}
   </div>
 );
-// ------------------------------------------------------------------------
+
 
 export default function Profile() {
   const { user } = useAuth();
@@ -114,7 +113,7 @@ export default function Profile() {
   const targetUserId = urlUserId || user?.uid;
   const isOwner = user?.uid === targetUserId;
 
-  // --- State Management ---
+  // State Management 
   const [username, setUsername] = useState("");
   const [role, setRole] = useState("");
   const [currentProfilePhoto, setCurrentProfilePhoto] = useState(defaultImg);
@@ -127,7 +126,7 @@ export default function Profile() {
   const [averageRating, setAverageRating] = useState(0);
   const [ratingCount, setRatingCount] = useState(0);
   const [isRatingSubmitted, setIsRatingSubmitted] = useState(false);
-  // ------------------------
+
 
   const [userPosts, setUserPosts] = useState([]);
   const [loadingPosts, setLoadingPosts] = useState(true);
@@ -179,7 +178,7 @@ export default function Profile() {
 
 useEffect(() => {
   const fetchUserPosts = async () => {
-    if (!targetUserId) return; // don't query yet if undefined
+    if (!targetUserId) return; 
 
     setLoadingPosts(true);
     try {
@@ -196,7 +195,7 @@ useEffect(() => {
         postType: doc.data().status,
       }));
 
-      console.log("Fetched posts:", allPosts); // ✅ Debug log
+      console.log("Fetched posts:", allPosts); 
       setUserPosts(allPosts);
     } catch (error) {
       console.error("Error fetching user posts:", error);
@@ -205,7 +204,7 @@ useEffect(() => {
     }
   };
 
-  // ✅ Only fetch when targetUserId exists and user is loaded
+  // Only fetch when targetUserId exists and user is loaded
   if (targetUserId || user) fetchUserPosts();
 }, [targetUserId, user]);
 
@@ -316,7 +315,7 @@ useEffect(() => {
     });
   };
 
-  // --- JSX RETURN ---
+
   return (
     <div className=" h-auto space-y-8">
       <div className="border border-gray-200 shadow-sm flex flex-wrap sm:flex-nowrap items-center gap-3 p-4 rounded-lg overflow-hidden bg-[#fafafa]">
@@ -356,12 +355,12 @@ useEffect(() => {
             </h2>
             <h3 className="text-sm text-gray-500">{role || "Loading..."}</h3>
 
-            {/* 🚨 RATING DISPLAY */}
+            {/* RATING DISPLAY */}
             {(ratingCount > 0 || !isOwner) && (
               <StarRatingDisplay rating={averageRating} count={ratingCount} />
             )}
 
-            {/* 3. Description Field (Editable for Owner) */}
+            {/* 3. Description Field (Editable for Owner only) */}
             {isOwner && isEditing ? (
               <textarea
                 value={description}
@@ -374,7 +373,7 @@ useEffect(() => {
               <p className="text-gray-500 text-sm">{description}</p>
             )}
 
-            {/* 🚨 RATING INPUT (Visible only if NOT owner, NOT rated, and Logged In) */}
+            {/* RATING INPUT */}
             {!isOwner && !isRatingSubmitted && user?.uid && (
               <div className="mt-4 p-3 border rounded-lg bg-white shadow-sm">
                 <p className="text-sm font-semibold mb-2 text-gray-700">
@@ -395,7 +394,6 @@ useEffect(() => {
               </div>
             )}
 
-            {/* Display confirmation if rated */}
             {!isOwner && isRatingSubmitted && (
               <p className="mt-4 text-sm text-green-600 font-medium">
                 <i className="bi bi-check-circle-fill mr-1"></i>
@@ -403,7 +401,6 @@ useEffect(() => {
               </p>
             )}
 
-            {/* 4. Action Buttons (Edit, Save, Logout) */}
             <div className="flex justify-center gap-3 mt-4">
               {isOwner && !isEditing && (
                 <button
@@ -425,7 +422,6 @@ useEffect(() => {
                 </button>
               )}
 
-              {/* Logout button remains outside the edit logic */}
               {isOwner && (
                 <button
                   type="button"
@@ -466,7 +462,6 @@ useEffect(() => {
           </div>
         )}
       </div>
-      {/* --- END USER POSTS SECTION --- */}
     </div>
   );
 }

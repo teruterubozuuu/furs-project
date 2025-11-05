@@ -45,7 +45,7 @@ export default function AddPost({ isOpen, onClose }) {
   };
 
   const handleClose = () => {
-    if (isSubmitting) return; // prevent closing while submitting
+    if (isSubmitting) return; 
     onClose();
     setPhotoPreview(null);
     setPhoto(null);
@@ -70,7 +70,7 @@ const handleSubmit = async (e) => {
     return;
   }
 
-  // 🔹 Fetch username & profile photo from Firestore
+  // Fetch username & profile photo from Firestore
   let username = "Anonymous";
   let userPhoto = "";
 
@@ -85,7 +85,7 @@ const handleSubmit = async (e) => {
     console.error("Error fetching user profile:", error);
   }
 
-  // 🔹 Upload post photo to Firebase Storage
+  // Upload post photo to Firebase Storage
   let photoURL = "";
   try {
     const storageRef = ref(storage, `posts/${user.uid}/${Date.now()}_${photo.name}`);
@@ -103,11 +103,10 @@ const handleSubmit = async (e) => {
       ? { lat: location.lat, lng: location.lng }
       : null;
 
-  // 🔹 Include the userPhoto and username in the post data
   const reportData = {
     userId: user.uid,
     username,
-    userPhoto, // 🧩 added field for profile photo
+    userPhoto, 
     photoURL,
     breed,
     coatColor: selectedCoatColor,

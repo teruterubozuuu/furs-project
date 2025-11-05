@@ -35,21 +35,17 @@ export default function RequireAuth({ children }) {
 
   if (loading) return null;
 
-  // Not logged in
   if (!user) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  // Trying to access admin page but not an admin
   if (location.pathname.startsWith("/admin") && userRole !== "Admin") {
     return <Navigate to="/home" replace />;
   }
 
-  // Trying to access normal user page but user is an admin
   if (!location.pathname.startsWith("/admin") && userRole === "Admin") {
     return <Navigate to="/admin/dashboard" replace />;
   }
 
-  // Everything is okay — render children
   return children;
 }

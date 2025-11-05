@@ -1,6 +1,5 @@
 import React from "react";
 import { NavLink } from "react-router-dom";
-import TopNavbar from "../components/TopNavbar";
 import logo from "../../../assets/logo_icon.png";
 
 export default function Header() {

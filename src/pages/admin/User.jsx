@@ -1,5 +1,11 @@
 import { useEffect, useState, useRef } from "react";
-import { collection, getDocs, doc, updateDoc, deleteDoc } from "firebase/firestore";
+import {
+  collection,
+  getDocs,
+  doc,
+  updateDoc,
+  deleteDoc,
+} from "firebase/firestore";
 import { getAuth, sendPasswordResetEmail } from "firebase/auth";
 import { db } from "../../firebase/config";
 import AddUser from "./components/AddUser";
@@ -28,7 +34,6 @@ export default function User() {
     fetchAllUsers();
   }, []);
 
-  // 🧠 Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (menuRef.current && !menuRef.current.contains(event.target)) {
@@ -39,18 +44,18 @@ export default function User() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // 🔁 Reset password
   const handleResetPassword = async (email) => {
     try {
       await sendPasswordResetEmail(auth, email);
       alert(`Password reset email sent to ${email}`);
     } catch (error) {
       console.error("Error sending password reset:", error);
-      alert("Failed to send reset email. Make sure the email exists in Firebase Auth.");
+      alert(
+        "Failed to send reset email. Make sure the email exists in Firebase Auth."
+      );
     }
   };
 
-  // 🚫 Disable account (update user status in Firestore)
   const handleDisableUser = async (userId) => {
     try {
       const userRef = doc(db, "users", userId);
@@ -62,7 +67,6 @@ export default function User() {
     }
   };
 
-  // 🗑️ Delete user from Firestore
   const handleDeleteUser = async (userId) => {
     const confirmDelete = confirm("Are you sure you want to delete this user?");
     if (!confirmDelete) return;
@@ -81,14 +85,12 @@ export default function User() {
     <div>
       <h1 className="text-xl font-semibold text-[#115315]">User Management</h1>
 
-      {/* 🧮 Display user count */}
       <p className="text-sm font-light">
         {users.length > 0
           ? `${users.length} user${users.length > 1 ? "s" : ""} found`
           : "No users found"}
       </p>
 
-      {/* Add + Search */}
       <div className="flex justify-between items-center py-3 flex-wrap gap-3">
         <button
           className="bg-[#115315] text-white px-3 py-1 rounded-md hover:bg-[#0a320d] transition-all"
@@ -106,17 +108,16 @@ export default function User() {
       <AddUser isOpen={isOpenPost} onClose={() => setIsOpenPost(false)} />
 
       {/* User Table */}
-{/* User Table */}
-<div className="lg:overflow-visible overflow-x-auto relative">
-  {/* Header */}
-  <div className="min-w-[400px] flex items-center justify-between bg-[#115315] py-2 px-3 text-white rounded-md">
-    <div className="flex-1 grid grid-cols-3 text-center">
-      <span>Email</span>
-      <span>Username</span>
-      <span>Role</span>
-    </div>
-    <span className="w-[24px]">{""}</span>
-  </div>
+      <div className="lg:overflow-visible overflow-x-auto relative">
+        {/* Header */}
+        <div className="min-w-[400px] flex items-center justify-between bg-[#115315] py-2 px-3 text-white rounded-md">
+          <div className="flex-1 grid grid-cols-3 text-center">
+            <span>Email</span>
+            <span>Username</span>
+            <span>Role</span>
+          </div>
+          <span className="w-[24px]">{""}</span>
+        </div>
 
         {/* Rows */}
         {users.map((u) => (
@@ -134,9 +135,7 @@ export default function User() {
             {/* Menu Icon + Dropdown */}
             <div className="relative flex flex-col items-end" ref={menuRef}>
               <i
-                onClick={() =>
-                  setOpenMenuId(openMenuId === u.id ? null : u.id)
-                }
+                onClick={() => setOpenMenuId(openMenuId === u.id ? null : u.id)}
                 className="cursor-pointer bi bi-three-dots-vertical text-[#115315] text-xl hover:text-[#0b3e10] transition duration-150 ease-in-out"
               ></i>
 
