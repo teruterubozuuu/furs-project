@@ -12,6 +12,7 @@ import {
   getDocs,
   addDoc,
   serverTimestamp,
+  Timestamp,
 } from "firebase/firestore";
 import { useAuth } from "../../../context/AuthContext";
 import defaultImg from "../../../assets/default_img.jpg";
@@ -213,7 +214,7 @@ export default function ViewPost() {
         username: userData?.username || "Anonymous",
         profilePhoto: userData?.profilePhoto || "",
         text: commentText,
-        timestamp: new Date(),
+        createdAt: Timestamp.now(),
       });
 
       setComments((prev) => [
@@ -484,8 +485,22 @@ export default function ViewPost() {
                   className="w-8 h-8 rounded-full object-cover"
                 />
                 <div className="flex flex-col">
+                <div className="flex items-center gap-2">
                   <span className="font-semibold text-sm">{comment.username}</span>
-                  <span className="text-gray-700 text-sm">{comment.text}</span>
+<span className="text-xs text-gray-500 font-light">{comment.timestamp?.toDate
+                      ? comment.timestamp
+                          .toDate()
+                          .toLocaleString("en-US", {
+                            year: "numeric",
+                            month: "short",
+                            day: "numeric",
+                            hour: "numeric",
+                            minute: "2-digit",
+                            hour12: true,
+                          })
+                      : "Just now"}   </span> 
+                      </div>
+                                    <span className="text-gray-700 text-sm">{comment.text}</span>
                 </div>
               </div>
             ))}
