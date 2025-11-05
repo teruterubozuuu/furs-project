@@ -15,6 +15,7 @@ import User from "../pages/admin/User";
 import ForgotPassword from "../pages/ForgotPassword";
 import Notifications from "../pages/app/Notifications";
 import ViewPost from "../pages/app/components/ViewPost";
+import Organizations from "../pages/app/Organizations";
 
 function AppRoutes() {
   return (
@@ -57,7 +58,7 @@ function AppRoutes() {
           path="/forgotpassword"
           element={
             <LandingPageLayout>
-              <ForgotPassword/>
+              <ForgotPassword />
             </LandingPageLayout>
           }
         />
@@ -74,16 +75,16 @@ function AppRoutes() {
           }
         />
 
-        <Route 
+        <Route
           path="/:username/status/:postId"
           element={
             <RequireAuth>
               <AppLayout>
-                <ViewPost/>
+                <ViewPost />
               </AppLayout>
             </RequireAuth>
           }
-          />
+        />
 
         <Route
           path="/profile"
@@ -91,6 +92,17 @@ function AppRoutes() {
             <RequireAuth>
               <AppLayout>
                 <Profile />
+              </AppLayout>
+            </RequireAuth>
+          }
+        />
+
+        <Route
+          path="/organizations"
+          element={
+            <RequireAuth>
+              <AppLayout>
+                <Organizations />
               </AppLayout>
             </RequireAuth>
           }
@@ -123,11 +135,11 @@ function AppRoutes() {
           element={
             <RequireAuth>
               <AppLayout>
-                <Notifications/>
+                <Notifications />
               </AppLayout>
             </RequireAuth>
           }
-          />
+        />
 
         {/*Route for Admin Layout*/}
         <Route
@@ -146,7 +158,7 @@ function AppRoutes() {
           element={
             <RequireAuth>
               <AdminLayout>
-                <User/>
+                <User />
               </AdminLayout>
             </RequireAuth>
           }
