@@ -38,7 +38,7 @@ export default function BottomNavbar() {
 
         {/*Notifications*/}
         <div>
-          <NavLink>
+          <NavLink to="/notifications">
             <i className="bi bi-bell text-[#fbc02d]  block text-center text-lg"></i>
           </NavLink>
         </div>

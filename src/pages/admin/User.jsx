@@ -111,7 +111,8 @@ export default function User() {
       <div className="lg:overflow-visible overflow-x-auto relative">
         {/* Header */}
         <div className="min-w-[400px] flex items-center justify-between bg-[#115315] py-2 px-3 text-white rounded-md">
-          <div className="flex-1 grid grid-cols-3 text-center">
+          <div className="flex-1 grid grid-cols-4 text-center">
+            <span>User UID</span>
             <span>Email</span>
             <span>Username</span>
             <span>Role</span>
@@ -126,7 +127,8 @@ export default function User() {
             className="min-w-[400px] flex items-center justify-between bg-[#D3ECD4] py-2 px-3 text-[#115315] rounded-md mt-3 relative"
           >
             {/* User Info */}
-            <div className="flex-1 grid grid-cols-3 text-center">
+            <div className="flex-1 grid grid-cols-4 text-center">
+              <span>{u.id}</span>
               <span className="truncate px-2">{u.email}</span>
               <span className="truncate px-2">{u.username}</span>
               <span className="truncate px-2">{u.userType}</span>

@@ -5,7 +5,7 @@ import { doc, getDoc } from "firebase/firestore";
 import { db } from "../firebase/config";
 
 export default function RedirectIfAuthenticated({ children }) {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth(); 
   const location = useLocation();
   const [userRole, setUserRole] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -32,24 +32,20 @@ export default function RedirectIfAuthenticated({ children }) {
     fetchUserRole();
   }, [user]);
 
-  // Wait until role is fetched
-  if (loading) return null;
+  if (authLoading || loading) return null;
 
-  // If user is logged in and visiting "/", "/login", or "/signup"
   if (user && userRole) {
     if (
-      location.pathname === "/" ||
-      location.pathname === "/login" ||
-      location.pathname === "/signup"
+      ["/", "/login", "/signup"].includes(location.pathname)
     ) {
-      if (userRole === "Admin") {
-        return <Navigate to="/admin/dashboard" replace />;
-      } else {
-        return <Navigate to="/home" replace />;
-      }
+      return (
+        <Navigate
+          to={userRole === "Admin" ? "/admin/dashboard" : "/home"}
+          replace
+        />
+      );
     }
   }
 
-  // If not logged in, allow landing page to show
   return children;
 }

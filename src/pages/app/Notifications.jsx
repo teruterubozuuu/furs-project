@@ -25,18 +25,25 @@ export default function Notifications() {
   }, [user]);
 
   const handleNotificationClick = async (notif) => {
-    try {
+  try {
+    const notifDoc = doc(db, "users", user.uid, "notifications", notif.id);
+    await updateDoc(notifDoc, { read: true });
 
-      const notifDoc = doc(db, "users", user.uid, "notifications", notif.id);
-      await updateDoc(notifDoc, { read: true });
+    if (notif.type === "like" || notif.type === "comment") {
 
-      if (notif.postId) {
+      if (notif.postId && notif.postUsername) {
         navigate(`/${notif.postUsername}/status/${notif.postId}`);
       }
-    } catch (error) {
-      console.error("Error handling notification click:", error);
+    } else if (notif.type === "rating") {
+
+      if (notif.senderId) {
+        navigate(`/profile/${user.uid}`); 
+      }
     }
-  };
+  } catch (error) {
+    console.error("Error handling notification click:", error);
+  }
+};
 
   const formatTime = (timestamp) => {
     if (!timestamp) return "";
@@ -75,7 +82,7 @@ export default function Notifications() {
                 <p className="text-sm text-gray-800">
                   <span className="font-semibold">{notif.senderName}</span>{" "}
                   {notif.type === "like" && "liked your post."}
-                  {notif.type === "rating" && `rated your post ${notif.value} ⭐.`}
+                  {notif.type === "rating" && `rated you ${notif.value} ⭐.`}
                   {notif.type === "comment" && "commented on your post."}
                 </p>
                 <p className="text-xs text-gray-500">{formatTime(notif.timestamp)}</p>

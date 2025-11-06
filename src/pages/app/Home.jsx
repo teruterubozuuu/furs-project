@@ -341,7 +341,7 @@ export default function Home() {
             return (
               <div
                 key={post.id}
-                className="mb-3 bg-[#fafafa] border border-gray-200 shadow-sm p-5 rounded-lg text-sm cursor-pointer"
+                className="mb-3 bg-[#fafafa] border border-gray-200 hover:bg-[#f1f1f1] transition-all ease-in shadow-sm p-5 rounded-lg text-sm cursor-pointer"
               >
                 {/* Post header */}
                 <div className="border-b border-gray-200">
