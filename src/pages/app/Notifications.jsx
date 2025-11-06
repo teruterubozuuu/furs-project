@@ -2,11 +2,13 @@ import { useEffect, useState } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { db } from "../../firebase/config";
 import { collection, query, orderBy, onSnapshot, updateDoc, doc } from "firebase/firestore";
+import { useNavigate } from "react-router-dom"; // ✅ import this
 import defaultImg from "../../assets/default_img.jpg";
 
 export default function Notifications() {
   const { user } = useAuth();
   const [notifications, setNotifications] = useState([]);
+  const navigate = useNavigate(); // ✅ initialize navigate
 
   useEffect(() => {
     if (!user) return;
@@ -22,12 +24,17 @@ export default function Notifications() {
     return () => unsubscribe();
   }, [user]);
 
-  const handleMarkAsRead = async (notifId) => {
+  const handleNotificationClick = async (notif) => {
     try {
-      const notifDoc = doc(db, "users", user.uid, "notifications", notifId);
+
+      const notifDoc = doc(db, "users", user.uid, "notifications", notif.id);
       await updateDoc(notifDoc, { read: true });
+
+      if (notif.postId) {
+        navigate(`/${notif.postUsername}/status/${notif.postId}`);
+      }
     } catch (error) {
-      console.error("Error marking notification as read:", error);
+      console.error("Error handling notification click:", error);
     }
   };
 
@@ -57,7 +64,7 @@ export default function Notifications() {
               className={`flex items-center gap-3 p-3 border rounded-lg cursor-pointer transition ${
                 notif.read ? "bg-gray-50" : "bg-[#e8f5e9]"
               }`}
-              onClick={() => handleMarkAsRead(notif.id)}
+              onClick={() => handleNotificationClick(notif)} // ✅ now triggers navigation
             >
               <img
                 src={notif.senderPhoto || defaultImg}
@@ -69,6 +76,7 @@ export default function Notifications() {
                   <span className="font-semibold">{notif.senderName}</span>{" "}
                   {notif.type === "like" && "liked your post."}
                   {notif.type === "rating" && `rated your post ${notif.value} ⭐.`}
+                  {notif.type === "comment" && "commented on your post."}
                 </p>
                 <p className="text-xs text-gray-500">{formatTime(notif.timestamp)}</p>
               </div>

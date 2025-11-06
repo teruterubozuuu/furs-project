@@ -5,6 +5,10 @@ body{
     font-family: 'Inter', sans-serif;
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 /* Firefox */
 .custom-scrollbar {
   scrollbar-width: thin; /* "auto" | "thin" | "none" */

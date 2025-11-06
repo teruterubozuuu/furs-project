@@ -15,7 +15,7 @@ export default function AddUser({ isOpen, onClose }) {
   const [userType, setUserType] = useState("Community Volunteer");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [verified, setVerified] = useState(false);
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [selectedRole, setSelectedRole] = useState("Role");
@@ -29,53 +29,50 @@ export default function AddUser({ isOpen, onClose }) {
     setEmail("");
     setPassword("");
     setUserType("Community Volunteer");
-    setVerified(false);
     setError("");
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-    setError("");
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  setIsSubmitting(true);
+  setError("");
 
-    try {
-      // 🧠 Create a temporary secondary auth instance
-      const secondaryAuth = getAuth();
-      const tempApp = auth.app; // current Firebase app
-      const tempAuth = getAuth(tempApp);
+  try {
 
-      // Create user without signing out current admin
-      const userCredential = await createUserWithEmailAndPassword(
-        tempAuth,
-        email,
-        password
-      );
+    const tempApp = auth.app;
+    const tempAuth = getAuth(tempApp);
 
-      const newUser = userCredential.user;
 
-      // Store user info in Firestore
-      await setDoc(doc(db, "users", newUser.uid), {
-        username,
-        email,
-        userType: selectedRole,
-        verified,
-        profilePhoto: "",
-        description: "Add a description...",
-        totalRatingSum: 0,
-        totalRatingCount: 0,
-      });
+    const userCredential = await createUserWithEmailAndPassword(
+      tempAuth,
+      email,
+      password
+    );
 
-      // 🧹 Sign out the new user to keep the admin logged in
-      await tempAuth.signOut();
+    const newUser = userCredential.user;
 
-      handleClose();
-    } catch (err) {
-      console.error("Error adding user:", err);
-      setError("Failed to add user. Email might already be in use.");
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+    await sendEmailVerification(newUser);
+
+    await setDoc(doc(db, "users", newUser.uid), {
+      username,
+      email,
+      userType: selectedRole,
+      profilePhoto: "",
+      description: "Add a description...",
+      totalRatingSum: 0,
+      totalRatingCount: 0,
+    });
+
+    await tempAuth.signOut();
+
+    handleClose();
+  } catch (err) {
+    console.error("Error adding user:", err);
+    setError("Failed to add user. Email might already be in use.");
+  } finally {
+    setIsSubmitting(false);
+  }
+};
 
   if (!isOpen) return null;
 
@@ -156,18 +153,6 @@ export default function AddUser({ isOpen, onClose }) {
                 </div>
               </MenuItems>
             </Menu>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <input
-              id="verified"
-              type="checkbox"
-              checked={verified}
-              onChange={(e) => setVerified(e.target.checked)}
-            />
-            <label htmlFor="verified" className="text-sm font-medium">
-              Mark as Verified
-            </label>
           </div>
 
           <button

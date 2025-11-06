@@ -4,10 +4,10 @@ import landingPageImage from "../../../assets/landing2.png";
 
 export default function LPHome() {
   return (
-    <main className="h-full flex flex-col justify-center items-center xl:flex-row bg-[#FFF6DF] overflow-hidden py-10">
+    <main className="xl:h-screen h-full flex flex-col justify-center items-center xl:flex-row bg-[#FFF6DF] overflow-hidden py-10">
       
       {/* Text Section */}
-      <div className="flex flex-col justify-center items-center md:items-start text-center md:text-start space-y-6 px-10 xl:px-20 xl:w-[40%] p-10">
+      <div className="flex flex-col justify-center items-center md:items-start text-center md:text-start space-y-5 px-10 xl:px-20 xl:w-[40%]">
         <h1 className="xl:text-7xl text-4xl font-bold text-[#2e7d32]">
           Find, Unite, and Rescue Strays
         </h1>
@@ -17,7 +17,7 @@ export default function LPHome() {
         <p className="xl:text-xl text-[#656565]">Join our community now!</p>
         <NavLink
           to="/signup"
-          className="bg-[#2e7d32] text-white py-2 px-6 rounded-sm font-semibold"
+          className="bg-[#2e7d32] text-white py-2 px-10 rounded-sm font-semibold"
         >
           Sign up
         </NavLink>
