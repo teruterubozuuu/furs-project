@@ -79,7 +79,7 @@ export default function LeftSideBar() {
                       }`}
                     ></i>
                     <span
-                      className={isActive ? "font-semibold text-gray-900" : "font-light"}
+                      className={isActive ? "font-semibold text-[#2e7d32] " : "font-light"}
                     >
                       Home
                     </span>
@@ -96,7 +96,7 @@ export default function LeftSideBar() {
                       }`}
                     ></i>
                     <span
-                      className={isActive ? "font-semibold text-gray-900" : "border-l-4 border-transparent  font-light"}
+                      className={isActive ? "font-semibold text-[#2e7d32] " : "border-l-4 border-transparent  font-light"}
                     >
                       Notifications
                     </span>
@@ -113,7 +113,7 @@ export default function LeftSideBar() {
                       }`}
                     ></i>
                     <span
-                      className={isActive ? "font-semibold text-gray-900" : " border-l-4 border-transparent  font-light"}
+                      className={isActive ? "font-semibold text-[#2e7d32] " : " border-l-4 border-transparent  font-light"}
                     >
                       Heatmap
                     </span>
@@ -131,7 +131,7 @@ export default function LeftSideBar() {
                       }`}
                     ></i>
                     <span
-                      className={isActive ? "font-semibold text-gray-900" : "border-l-4 border-transparent font-light"}
+                      className={isActive ? "font-semibold text-[#2e7d32]" : "border-l-4 border-transparent font-light"}
                     >
                       Organizations
                     </span>
@@ -149,7 +149,7 @@ export default function LeftSideBar() {
                       }`}
                     ></i>
                     <span
-                      className={isActive ? "font-semibold text-gray-900" : "border-l-4 border-transparent font-light"}
+                      className={isActive ? "font-semibold text-[#2e7d32]" : "border-l-4 border-transparent font-light"}
                     >
                       Profile
                     </span>

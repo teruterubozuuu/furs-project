@@ -5,11 +5,13 @@ import L from "leaflet";
 import "leaflet.heat";
 import { collection, onSnapshot } from "firebase/firestore";
 import { db } from "../../firebase/config";
+import { OrbitProgress } from "react-loading-indicators";
 
 export default function Heatmap() {
   const [points, setPoints] = useState([]);
   const [topAreas, setTopAreas] = useState([]);
   const [areaNames, setAreaNames] = useState([]);
+  const [isLoading,setIsLoading] = useState(true);
 
   useEffect(() => {
     const collections = ["posts"];
@@ -103,12 +105,16 @@ useEffect(() => {
 
       const sorted = merged.sort((a, b) => b.count - a.count).slice(0, 5);
       setAreaNames(sorted);
+
+      setIsLoading(false);
     });
+  } else if (points.length > 0 && topAreas.length === 0) {
+    setIsLoading(false);
   }
 }, [topAreas]);
 
 
-  useEffect(() => {
+useEffect(() => {
   if (points.length > 0) {
     setTopAreas(summarizeTopAreas(points));
   }
@@ -118,9 +124,10 @@ useEffect(() => {
   async function fetchAreaNames(topAreas) {
     const results = await Promise.all(
       topAreas.map(async (area) => {
+         const functionBaseUrl = `http://127.0.0.1:5001/furs-project-7a0a3/us-central1/api`;
         try {
           const res = await fetch(
-            `https://nominatim.openstreetmap.org/reverse?lat=${area.lat}&lon=${area.lng}&format=json&accept-language=en`
+            `${functionBaseUrl}/reverse?lat=${area.lat}&lon=${area.lng}&format=json&accept-language=en`
           );
           const json = await res.json();
           const addr = json.address || {};
@@ -154,49 +161,61 @@ useEffect(() => {
             This heatmap highlights areas with a high concentration of stray
             animal sightings, grouped approximately by barangay or district.
           </p>
+          
+          {/* ✅ START LOADING CHECK */}
+          {isLoading ? (
+            <div className="flex flex-col items-center justify-center h-[500px] w-full border border-gray-300 rounded-md">
+              <OrbitProgress color="#2e7d32" size="large" />
+              <p className="mt-4 text-gray-600">Loading map data and calculating top areas...</p>
+            </div>
+          ) : (
+            <>
+              {/* Heatmap */}
+              <div className="h-[500px] w-full border border-gray-300 rounded-md overflow-hidden">
+                <MapContainer
+                  center={[14.6295, 121.0419]}
+                  zoom={15}
+                  scrollWheelZoom={true}
+                  style={{ height: "100%", width: "100%" }}
+                >
+                  <TileLayer
+                    attribution='&copy; <a href="http://osm.org/copyright">OpenStreetMap</a>'
+                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                  />
+                  <HeatmapLayer points={points} />
+                </MapContainer>
+              </div>
 
-          {/* Heatmap */}
-          <div className="h-[500px] w-full border border-gray-300 rounded-md overflow-hidden">
-            <MapContainer
-              center={[14.6295, 121.0419]} 
-              zoom={15}
-              scrollWheelZoom={true}
-              style={{ height: "100%", width: "100%" }}
-            >
-              <TileLayer
-                attribution='&copy; <a href="http://osm.org/copyright">OpenStreetMap</a>'
-                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-              />
-              <HeatmapLayer points={points} />
-            </MapContainer>
-          </div>
+              {/* Top 5 Areas Section (Only show if NOT loading) */}
+              <div className="flex justify-center">
+                <div className="text-center">
+                  <h2 className="font-semibold text-lg text-green-700 mb-2">Top 5 Areas</h2>
+                  {areaNames.length > 0 ? (
+                    <ul className="text-sm text-gray-700 list-none space-y-2">
+                      {areaNames.map((area, index) => (
+                        <li key={index}>
+                          <span className="font-medium">
+                            #{index + 1}: {area.name}
+                          </span>
+                          <br />
+                          <span className="text-gray-500 text-xs">
+                            ({area.count} reports)
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="text-gray-500 text-sm">Not enough data yet.</p>
+                  )}
+                </div>
+              </div>
+            </>
+          )} 
+          {/* ✅ END LOADING CHECK */}
+
         </main>
-      </div>
-
-
-      <div className="flex justify-center">
-        <div className="text-center">
-<h2 className="font-semibold text-lg text-green-700 mb-2">Top 5 Areas</h2>
-        {areaNames.length > 0 ? (
-          <ul className="text-sm text-gray-700 list-none space-y-2">
-            {areaNames.map((area, index) => (
-              <li key={index}>
-                <span className="font-medium">
-                  #{index + 1}: {area.name}
-                </span>
-                <br />
-                <span className="text-gray-500 text-xs">
-                  ({area.count} reports)
-                </span>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="text-gray-500 text-sm">Not enough data yet.</p>
-        )}
-        </div>
-        
       </div>
     </div>
   );
 }
+  

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, NavLink, useNavigate } from "react-router-dom";
 import { db } from "../../firebase/config";
 import {
   collection,
@@ -38,6 +38,7 @@ export default function Home() {
   const [isEditing, setIsEditing] = useState(false);
   const [postToEdit, setPostToEdit] = useState(null);
   const [userType, setUserType] = useState("");
+  const navigate = useNavigate();
 
   const [currentUserProfile, setCurrentUserProfile] = useState({
     photoURL: defaultImg,
@@ -109,26 +110,6 @@ export default function Home() {
           });
           setUserType(data.userType || "");
         }
-
-        const updatedPosts = await Promise.all(
-          combined.map(async (post) => {
-            if (post.location?.lat && post.location?.lng) {
-              const url = `https://nominatim.openstreetmap.org/reverse?lat=${post.location.lat}&lon=${post.location.lng}&format=json&accept-language=en`;
-              try {
-                const response = await fetch(url);
-                const data = await response.json();
-                const address = data.display_name || "Address not found";
-                return { ...post, address };
-              } catch (error) {
-                console.error("Reverse geocoding error:", error);
-                return { ...post, address: "Address error" };
-              }
-            }
-            return { ...post, address: "No coordinates" };
-          })
-        );
-
-        setPosts(updatedPosts);
       } catch (error) {
         console.error("Error fetching current user profile:", error);
       }
@@ -200,63 +181,105 @@ export default function Home() {
 
     const unsubPosts = onSnapshot(
       query(postsRef, orderBy("createdAt", "desc")),
-      (snapshot) => handleSnapshot(snapshot, "General")
+      (snapshot) => handleSnapshot(snapshot)
     );
 
     return () => {
       unsubPosts();
     };
-  }, []);
+  }, [user]);
 
-  // 5. HELPER: Handle snapshot updates
-  const handleSnapshot = async (snapshot, type) => {
+// 5. HELPER: Handle snapshot updates
+  const handleSnapshot = async (snapshot) => {
     const newPosts = await Promise.all(
       snapshot.docs.map(async (docSnap) => {
         const data = docSnap.data();
         let isLikedByUser = false;
 
+        // Fetch like status (Fast Firestore check)
         if (user?.uid) {
           const likeRef = doc(db, "posts", docSnap.id, "likes", user.uid);
           const likeSnap = await getDoc(likeRef);
           isLikedByUser = likeSnap.exists();
         }
 
-        let address = "No coordinates";
-
-        if (data.location?.lat && data.location?.lng) {
-          try {
-            const res = await fetch(
-              `https://nominatim.openstreetmap.org/reverse?lat=${data.location.lat}&lon=${data.location.lng}&format=json&accept-language=en`
-            );
-            const json = await res.json();
-            address = json.display_name || "Address not found";
-          } catch {
-            address = "Address error";
-          }
-        }
-
+        // Return the post data immediately without the address
         return {
           id: docSnap.id,
           ...data,
-          type,
-          address,
+          type: "General", // Changed from 'type' to a fixed type for this example
           isLikedByUser,
+          // Set initial address to a placeholder
+          address: data.location?.lat ? "Fetching address..." : "No coordinates",
         };
       })
     );
 
-    setPosts((prev) => {
-      const others = prev.filter((p) => p.type !== type);
-      const merged = [...others, ...newPosts];
-      return merged.sort((a, b) => {
-        const aDate = a.createdAt?.toDate?.() || new Date(0);
-        const bDate = b.createdAt?.toDate?.() || new Date(0);
-        return bDate - aDate;
-      });
+    
+
+
+
+const merged = newPosts.sort((a, b) => {
+      const aDate = a.createdAt?.toDate?.() || new Date(0);
+      const bDate = b.createdAt?.toDate?.() || new Date(0);
+      return bDate - aDate;
+    });
+    
+    setPosts(merged);
+    setIsLoading(false);
+
+    fetchAddressesForPosts(merged);
+
+    
+  };
+
+  // 6. NEW HELPER: Fetch addresses using the Firebase Function proxy
+  const fetchAddressesForPosts = async (currentPosts) => {
+    const promises = currentPosts.map(async (post) => {
+      if (!post.location?.lat) return post; 
+
+      //const functionUrl = '/api/reverse'; 
+      // For local testing: 
+      const functionBaseUrl = `http://127.0.0.1:5001/furs-project-7a0a3/us-central1/api`; 
+      
+      try {
+        // 2. Append the Express route '/reverse' and the query parameters
+        const res = await fetch(
+          `${functionBaseUrl}/reverse?lat=${post.location.lat}&lon=${post.location.lng}`
+        );
+
+        const json = await res.json();
+        const address = json.display_name || "Address not found";
+        return { ...post, address };
+      } catch (error) {
+        console.error("Function/Reverse geocoding error:", error);
+        return { ...post, address: "Address error" };
+      }
     });
 
-    setIsLoading(false);
+    const updatedPosts = await Promise.all(promises);
+    
+
+    setPosts(prevPosts => {
+        const map = new Map(updatedPosts.map(p => [p.id, p]));
+        return prevPosts.map(p => map.get(p.id) || p);
+    });
   };
+
+    // 7. UPDATED FUNCTION: Handle similarity search and navigation
+    const handleFindSimilarPosts = (targetPost) => {
+        if (!targetPost.id) {
+            console.error("Target post is missing ID.");
+            return;
+        }
+
+        navigate(`/similar-posts/${targetPost.username}/${targetPost.id}`, { 
+            state: { 
+                originalPost: targetPost,
+            } 
+        });
+    };
+
 
   return (
     <div className="max-w-[700px] space-y-4">
@@ -346,7 +369,7 @@ export default function Home() {
                 {/* Post header */}
                 <div className="border-b border-gray-200">
                   <div className="flex justify-between items-start pb-2">
-                    <div className="flex h-full items-center">
+                    <div className="flex h-full items-center ">
                       {/* 🚨 FIX: Post Avatar */}
                       <img
                         src={
@@ -384,7 +407,7 @@ export default function Home() {
                               : "Just now"}
                           </p>
                         </div>
-                        <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-1">
                           <span
                             className={`text-xs p-1 border rounded-sm ${
                               post.status === "Stray Animal"
@@ -397,7 +420,7 @@ export default function Home() {
                             {post.status}
                           </span>
                           {/* Dog characteristics */}
-                          <div className="flex py-1 gap-2">
+                          <div className="flex py-1 gap-1">
                             <span className="text-xs p-1 border bg-green-100 text-green-700 border-green-300 rounded-sm">
                               {post.coatColor}
                             </span>
@@ -409,11 +432,24 @@ export default function Home() {
                             )}
                           </div>
                         </div>
+
+
                       </div>
                     </div>
 
                     {/* Edit/Delete Buttons */}
-                    <div>
+                    <div className="flex items-center gap-2">
+                        <button
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            // Correctly passing the full 'post' object 
+                            handleFindSimilarPosts(post); 
+                          }}
+                          className="block text-xs text-end text-gray-500 font-semibold underline hover:text-green-700 transition"
+                        >
+                          See similar posts
+                        </button>
                       {isOwner && (
                         <div className="relative flex flex-col items-end">
                           {/* Post Menu */}
@@ -460,12 +496,15 @@ export default function Home() {
                           </div>
                         </div>
                       )}
+                      
                     </div>
+                    
                   </div>
 
                   <Link to={`/${post.username}/status/${post.id}`}>
                     {/* Description */}
-                    <p>{post.description}</p>
+                    <p>{post.description}</p> 
+
 
                     {/* Photo */}
                     <div className="flex justify-center p-3">
@@ -534,7 +573,7 @@ export default function Home() {
                       <span>Comment</span>
                     </div>
                     <div className="flex items-center gap-2 hover:text-[#fbc02d]">
-                      <i class="bi bi-star-half"></i>
+                      <i className="bi bi-star-half"></i>
                       <span>Rate</span>
                     </div>
                   </div>

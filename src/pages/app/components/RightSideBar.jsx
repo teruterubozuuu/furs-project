@@ -1,4 +1,5 @@
 import React from "react";
+import ReputationScore from "./ReputationScore";
 
 const LOCAL_ORGS = [
   {
@@ -30,25 +31,31 @@ const LOCAL_ORGS = [
 
 export default function LeftSideBar() {
   return (
-    <div className=" hidden xl:flex  xl:flex-col xl:w-full p-5 border rounded-lg bg-[#fafafa] border-gray-200 shadow-sm ">
-      <div className="text-sm">
-        <h1 className="text-lg font-semibold text-[#2e7d32]">
-          Animal Welfare Organizations
-        </h1>
-        <ul className="space-y-1">
-          {LOCAL_ORGS.map((org) => (
-            <li key={org.id}>
-              <a
-                href={org.websiteUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="block p-2 text-gray-700 hover:bg-[#ffe9b0] hover:text-[#2e7d32] transition-colors duration-200 rounded-lg font-medium text-base"
-              >
-                {org.name}
-              </a>
-            </li>
-          ))}
-        </ul>
+    <div className="space-y-3">
+      <div className="hidden xl:flex  xl:flex-col xl:w-full p-5 border rounded-lg bg-[#fafafa] border-gray-200 shadow-sm ">
+        <ReputationScore/>
+      </div>
+
+      <div className=" hidden xl:flex  xl:flex-col xl:w-full p-5 border rounded-lg bg-[#fafafa] border-gray-200 shadow-sm ">
+        <div className="text-sm">
+          <h1 className="text-lg font-semibold text-[#2e7d32]">
+            Animal Welfare Organizations
+          </h1>
+          <ul className="space-y-1">
+            {LOCAL_ORGS.map((org) => (
+              <li key={org.id}>
+                <a
+                  href={org.websiteUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block p-2 text-gray-700 hover:bg-[#ffe9b0] hover:text-[#2e7d32] transition-colors duration-200 rounded-lg font-medium text-base"
+                >
+                  {org.name}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </div>
       </div>
     </div>
   );

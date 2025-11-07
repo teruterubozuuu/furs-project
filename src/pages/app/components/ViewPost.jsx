@@ -20,7 +20,7 @@ import EditPostModal from "./EditPostModal";
 import RatingModal from "./RatingModal";
 
 export default function ViewPost() {
-  const { username, postId } = useParams();
+  const { postId } = useParams();
   const { user, userData } = useAuth();
 
   const [post, setPost] = useState(null);
@@ -45,7 +45,10 @@ export default function ViewPost() {
 
         if (postSnap.exists()) {
           const postData = postSnap.data();
-          setPost({ id: postSnap.id, ...postData });
+          // Merge ID and data immediately for local use
+          const fullPostData = { id: postSnap.id, ...postData }; 
+          
+          setPost(fullPostData); // Set the state
           setLikesCount(postData.likes || 0);
           setIsOwner(user?.uid === postData.userId);
 
@@ -55,14 +58,16 @@ export default function ViewPost() {
             setIsLikedByUser(likeSnap.exists());
           }
 
-          if (postData.location?.lat && postData.location?.lng) {
+          if (fullPostData.location?.lat && fullPostData.location?.lng) {
+            const functionBaseUrl = `http://127.0.0.1:5001/furs-project-7a0a3/us-central1/api`;
             try {
               const res = await fetch(
-                `https://nominatim.openstreetmap.org/reverse?lat=${postData.location.lat}&lon=${postData.location.lng}&format=json&accept-language=en`
+                `${functionBaseUrl}/reverse?lat=${fullPostData.location.lat}&lon=${fullPostData.location.lng}`
               );
               const json = await res.json();
               setAddress(json.display_name || "Address not found");
-            } catch {
+            } catch (error) {
+              console.error("Function/Reverse geocoding error:", error);
               setAddress("Address unavailable");
             }
           } else {
@@ -439,7 +444,7 @@ export default function ViewPost() {
                 {post.location.landmark}
               </p>
             )}
-                        <p className="italic">{address}</p>
+                        <p className="italic"><span className="font-semibold ">Address:</span>{" "} {address}</p>
           </div>
 
           {/* Like, Comment, Rate */}
