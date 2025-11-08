@@ -18,10 +18,12 @@ import { useAuth } from "../../../context/AuthContext";
 import defaultImg from "../../../assets/default_img.jpg";
 import EditPostModal from "./EditPostModal";
 import RatingModal from "./RatingModal";
+import { useNavigate } from "react-router-dom";
 
 export default function ViewPost() {
   const { postId } = useParams();
   const { user, userData } = useAuth();
+  const navigate = useNavigate();
 
   const [post, setPost] = useState(null);
   const [isOwner, setIsOwner] = useState(false);
@@ -304,6 +306,21 @@ export default function ViewPost() {
   const profilePath =
     post?.userId === user?.uid ? "/profile" : `/profile/${post?.userId}`;
 
+        // 7. UPDATED FUNCTION: Handle similarity search and navigation
+    const handleFindSimilarPosts = (targetPost) => {
+        if (!targetPost.id) {
+            console.error("Target post is missing ID.");
+            return;
+        }
+
+        navigate(`/similar-posts/${targetPost.username}/${targetPost.id}`, { 
+            state: { 
+                originalPost: targetPost,
+            } 
+        });
+    };
+
+
   return (
     <div className="xl:min-w-[650px] border border-gray-200 bg-white rounded-lg p-7">
       {isEditing && postToEdit && (
@@ -336,7 +353,7 @@ export default function ViewPost() {
               <img
                 src={post.userPhoto || defaultImg}
                 alt="Profile"
-                className="w-14 h-14 rounded-full object-cover"
+                className="w-17 h-17 rounded-full object-cover"
               />
               <div className="pl-2">
                 <div className="flex items-center gap-2 flex-wrap">
@@ -360,32 +377,50 @@ export default function ViewPost() {
                   </p>
                 </div>
 
-                <div className="flex items-center gap-2">
-                  <span
-                    className={`text-xs p-1 border rounded-sm ${
-                      post.status === "Stray Animal"
-                        ? "bg-red-100 text-red-700 border-red-300"
-                        : post.status === "Lost Pet"
-                        ? "bg-yellow-100 text-yellow-700 border-yellow-300"
-                        : "bg-gray-100 text-gray-700 border-gray-300"
-                    }`}
-                  >
-                    {post.status}
-                  </span>
+                          <div className="md:flex md:flex-row flex-col gap-1">
+                            <div className="flex items-center gap-1">
 
-                  <div className="flex py-1 gap-2">
-                    {post.coatColor && (
-                      <span className="text-xs p-1 border bg-green-100 text-green-700 border-green-300 rounded-sm">
-                        {post.coatColor}
-                      </span>
-                    )}
-                    {post.breed && (
-                      <span className="text-xs p-1 border bg-green-100 text-green-700 border-green-300 rounded-sm">
-                        {post.breed}
-                      </span>
-                    )}
-                  </div>
-                </div>
+                          <span
+                            className={`text-[10px] p-1 border rounded-sm ${
+                              post.status === "Stray Animal"
+                                ? "bg-red-100 text-red-700 border-red-300"
+                                : post.status === "Lost Pet"
+                                ? "bg-yellow-100 text-yellow-700 border-yellow-300"
+                                : "bg-gray-100 text-gray-700 border-gray-300"
+                            }`}
+                          >
+                            {post.status}
+                          </span>
+
+
+                            {post.animalType && (
+                              <span className={`text-[10px] flex items-center p-1 border rounded-sm ${
+                              post.animalType === "Dog"
+                                ? "bg-blue-100 text-blue-700 border-blue-300"
+                                : post.animalType === "Cat"
+                                ? "bg-orange-100 text-orange-700 border-orange-300"
+                                : "bg-gray-100 text-gray-700 border-gray-300"
+                            }`}>
+                                {post.animalType}
+                              </span>
+                            )}
+                            </div>
+                          {/* Dog characteristics */}
+                          <div className="flex py-1 gap-1">
+
+
+                            {post.breed && (
+                              <span className="text-[10px] flex items-center  p-1 border bg-green-100 text-green-700 border-green-300 rounded-sm">
+                                {post.breed}
+                              </span>
+                            )}
+
+                            <span className="text-[10px] flex items-center  p-1 border bg-green-100 text-green-700 border-green-300 rounded-sm">
+                              {post.coatColor}
+                            </span>
+                          </div>
+                          
+                        </div>
               </div>
             </div>
 
@@ -423,8 +458,19 @@ export default function ViewPost() {
               </div>
             )}
           </div>
-
+                        <button
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            // Correctly passing the full 'post' object 
+                            handleFindSimilarPosts(post); 
+                          }}
+                          className="cursor-pointer text-[10px] text-start text-gray-500 font-semibold underline hover:text-green-700 transition"
+                        >
+                          See similar posts
+                        </button>
           {/* Description */}
+
           <p className="text-gray-700">{post.description}</p>
 
           {/* Photo */}

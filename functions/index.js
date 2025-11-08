@@ -17,13 +17,11 @@ const auth = getAuth();
 // Access HF token from the function environment variables
 const HF_API_TOKEN = process.env.HF_API_TOKEN;
 
-// Hugging Face Model for Sentence Similarity
-const HF_MODEL_URL = "https://api-inference.huggingface.co/models/sentence-transformers/all-MiniLM-L6-v2";
+// Hugging Face Model for Feature Extraction (Embeddings)
+// This new endpoint requires manual Cosine Similarity calculation (implemented below).
+const HF_EMBEDDING_MODEL_URL = "https://api-inference.huggingface.co/models/intfloat/e5-mistral-7b-instruct";
 
 const app = express();
-
-// Ensure app.use(cors) and app.use(express.json) are only applied once to the app
-// We will remove the duplicates later in the file.
 
 // Enable CORS for all routes (defined early)
 app.use(cors({
@@ -58,30 +56,59 @@ const getDistance = (lat1, lon1, lat2, lon2) => {
 };
 
 /**
- * Calls the Hugging Face API to calculate the batch similarity score
- * between a source sentence and a list of target sentences.
- * @param {string} sourceText The description of the target post.
- * @param {string[]} targetTexts Array of descriptions from other posts.
- * @returns {Promise<number[]>} Array of cosine similarity scores (0 to 1).
+ * Calculates the cosine similarity between two vectors (arrays of numbers).
+ * @returns {number} The result ranges from -1 (opposite) to 1 (identical).
  */
-async function fetchBatchSimilarity(sourceText, targetTexts) {
-    if (!HF_API_TOKEN || !sourceText || targetTexts.length === 0) {
-        console.warn("AI Similarity skipped: Missing token, source text, or target texts.");
-        return targetTexts.map(() => 0);
+const cosineSimilarity = (vecA, vecB) => {
+    let dotProduct = 0;
+    let magnitudeA = 0;
+    let magnitudeB = 0;
+
+    // Ensure vectors have the same length
+    if (vecA.length !== vecB.length) {
+        console.error("Vector lengths do not match.");
+        return 0;
+    }
+
+    for (let i = 0; i < vecA.length; i++) {
+        dotProduct += vecA[i] * vecB[i];
+        magnitudeA += vecA[i] * vecA[i];
+        magnitudeB += vecB[i] * vecB[i];
+    }
+
+    magnitudeA = Math.sqrt(magnitudeA);
+    magnitudeB = Math.sqrt(magnitudeB);
+
+    if (magnitudeA === 0 || magnitudeB === 0) {
+        return 0; // Avoid division by zero
+    }
+
+    // Cosine similarity formula
+    return dotProduct / (magnitudeA * magnitudeB);
+};
+
+
+/**
+ * Calls the Hugging Face API to fetch embeddings (feature vectors) in a batch.
+ * @param {string[]} texts Array of texts to embed.
+ * @returns {Promise<number[][]>} Array of embedding vectors.
+ */
+async function fetchEmbeddings(texts) {
+    if (!HF_API_TOKEN || texts.length === 0) {
+        console.warn("Embedding fetching skipped: Missing token or texts.");
+        return [];
     }
     
-    // Check if the model is currently loading (common HF delay)
-    let response = await fetch(HF_MODEL_URL, {
+    // Send the batch request
+    let response = await fetch(HF_EMBEDDING_MODEL_URL, {
         method: 'POST',
         headers: {
             'Authorization': `Bearer ${HF_API_TOKEN}`, 
             'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-            inputs: {
-                source_sentence: sourceText,
-                sentences: targetTexts,
-            }
+            // The inputs array contains all sentences to be embedded
+            inputs: texts,
         }),
     });
 
@@ -89,29 +116,48 @@ async function fetchBatchSimilarity(sourceText, targetTexts) {
     if (response.status === 503) {
         console.log("HF model is loading, waiting 10 seconds...");
         await new Promise(resolve => setTimeout(resolve, 10000));
-        response = await fetch(HF_MODEL_URL, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${HF_API_TOKEN}`,
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                inputs: {
-                    source_sentence: sourceText,
-                    sentences: targetTexts,
-                }
-            }),
-        });
+        return fetchEmbeddings(texts); // Retry recursively
     }
 
     if (!response.ok) {
-        console.error(`HF API Error (${response.status}):`, await response.text());
-        return targetTexts.map(() => 0);
+        console.error(`HF Embedding API Error (${response.status}):`, await response.text());
+        return [];
     }
 
-    // The API returns an array of similarity scores for the batch
-    const scores = await response.json();
-    return Array.isArray(scores) ? scores : targetTexts.map(() => 0);
+    const embeddings = await response.json();
+    return Array.isArray(embeddings) ? embeddings : [];
+}
+
+/**
+ * Fetches embeddings for the source and targets, calculates cosine similarity,
+ * and returns the scores for the target texts.
+ * @param {string} sourceText The description of the target post.
+ * @param {string[]} targetTexts Array of descriptions from other posts.
+ * @returns {Promise<number[]>} Array of cosine similarity scores (0 to 1).
+ */
+async function fetchBatchEmbeddingsAndScore(sourceText, targetTexts) {
+     if (!sourceText || targetTexts.length === 0) {
+         return targetTexts.map(() => 0);
+    }
+    
+    // Fetch embeddings for the source and all targets in a single batch call
+    const allTexts = [sourceText, ...targetTexts];
+    const embeddings = await fetchEmbeddings(allTexts);
+
+    if (embeddings.length !== allTexts.length || embeddings.length < 1) {
+        console.warn("Failed to retrieve expected number of embeddings.");
+        return targetTexts.map(() => 0);
+    }
+    
+    const sourceEmbedding = embeddings[0];
+    const comparisonEmbeddings = embeddings.slice(1);
+    
+    // Calculate the cosine similarity score for each comparison embedding
+    const scores = comparisonEmbeddings.map(targetEmbedding => 
+        cosineSimilarity(sourceEmbedding, targetEmbedding)
+    );
+    
+    return scores;
 }
 
 
@@ -205,21 +251,23 @@ app.post("/similar-posts", async (req, res) => {
         // Prepare data for batch AI call
         const comparisonDescriptions = postsWithDescriptions.map(p => p.description);
         
-        // 2. Fetch AI Similarity Scores in a single batch
+        // 2. Fetch AI Similarity Scores via Feature Extraction and manual Cosine Similarity
         let aiScores = [];
         if (targetDescription.length > 0 && comparisonDescriptions.length > 0) {
-            aiScores = await fetchBatchSimilarity(targetDescription, comparisonDescriptions);
+            // Use the new function that fetches embeddings and calculates scores
+            aiScores = await fetchBatchEmbeddingsAndScore(targetDescription, comparisonDescriptions);
         }
 
         // 3. Calculate Final Similarity Score (Location, Attributes, AI)
         
         // Define weights (total must be 1.0)
         const weights = {
-            location: 0.6, // Highest priority
-            aiDescription: 0.2, // AI Description matching
-            color: 0.05,
-            breed: 0.05,
-            status: 0.1 // Status is critical for filtering
+            location: 0.20, 
+            aiDescription: 0.20, 
+            color: 0.15,
+            breed: 0.20, 
+            animalType: 0.15, 
+            status: 0.10 // Total: 1.00
         };
         
         let aiScoreIndex = 0;
@@ -227,7 +275,7 @@ app.post("/similar-posts", async (req, res) => {
         const postsWithScore = allPosts.map(post => {
             let score = 0;
             
-            // --- Location Match Check (60% Weight) ---
+            // --- Location Match Check (40% Weight) ---
             let distance = Infinity;
             let locationScore = 0;
             let aiDescriptionScore = 0;
@@ -246,7 +294,7 @@ app.post("/similar-posts", async (req, res) => {
                     return { ...post, similarityScore: 0 }; 
                 }
 
-                // Normalize proximity: 0km -> 1.0, 10km -> 0.0
+                // Normalize proximity: 0km -> 1.0, 10km -> 0.0 (using 15km as soft limit for score decay)
                 locationScore = Math.max(0, 1 - (distance / (MAX_COMPARISON_DISTANCE_KM * 1.5))); 
                 score += locationScore * weights.location;
             } else {
@@ -254,8 +302,8 @@ app.post("/similar-posts", async (req, res) => {
             }
 
 
-            // --- AI Description Match (20% Weight) ---
-            if (post.description && targetDescription && post.description.length > 0) {
+            // --- AI Description Match (30% Weight) ---
+            if (post.description && targetPost.description && post.description.length > 0) {
                 // Check if this post was included in the AI batch calculation
                 const wasInBatch = postsWithDescriptions.some(p => p.id === post.id);
 
@@ -267,14 +315,14 @@ app.post("/similar-posts", async (req, res) => {
             }
             // If there's no description to compare, the score contribution is 0
 
-            // --- Fixed Attribute Matches (Remaining 20% Weight) ---
+            // --- Fixed Attribute Matches (30% Weight) ---
 
             // Match 1: Coat Color (5% Weight)
             if (post.coatColor && targetPost.coatColor && post.coatColor.toLowerCase() === targetPost.coatColor.toLowerCase()) {
                 score += weights.color;
             }
 
-            // Match 2: Breed (5% Weight)
+            // Match 2: Breed (13% Weight)
             if (post.breed && targetPost.breed && post.breed.toLowerCase() === targetPost.breed.toLowerCase()) {
                 score += weights.breed;
             }
@@ -282,6 +330,11 @@ app.post("/similar-posts", async (req, res) => {
             // Match 3: Status (10% Weight)
             if (post.status && targetPost.status && post.status === targetPost.status) {
                 score += weights.status;
+            }
+
+            // Match 4: Animal Type (2% Weight)
+            if (post.animalType && targetPost.animalType && post.animalType.toLowerCase() === targetPost.animalType.toLowerCase()) {
+                score += weights.animalType;
             }
 
             return { 
@@ -306,13 +359,6 @@ app.post("/similar-posts", async (req, res) => {
 });
 
 
-// ----------------------------------------------------------------------
-// Mock Endpoints (These remain as mocks)
-// ----------------------------------------------------------------------
-async function checkSimilarity(text1, text2) { return 0; }
-async function fetchSimilarityScoreArray(text1, text2) { return [0]; }
 app.post("/api/similarity", async (req, res) => { res.json({ similarity: [0] }); });
 
-
-// EXPORT THE EXPRESS APP AS A SINGLE FIREBASE HTTPS FUNCTION
 export const api = functions.https.onRequest(app);

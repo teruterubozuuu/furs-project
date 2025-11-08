@@ -160,6 +160,7 @@ export default function SimilarPosts() {
         </p>
         
         <div className="flex flex-wrap gap-2 text-xs pt-2 border-t border-gray-100">
+          {post.animalType && <span className="p-1 bg-green-100 rounded">Animal Type: {post.animalType}</span>  }
             {post.breed && <span className="p-1 bg-green-100 rounded">Breed: {post.breed}</span>}
             {post.coatColor && <span className="p-1 bg-green-100 rounded">Color: {post.coatColor}</span>}
             {post.location?.landmark && <span className="p-1 bg-green-100 rounded">Landmark: {post.location.landmark}</span>}
@@ -176,18 +177,14 @@ export default function SimilarPosts() {
   };
 
   return (
-    <div className="container mx-auto p-4 max-w-[700px] space-y-6">
+    <div className="container mx-auto p-4 max-w-[700px] space-y-6 border border-gray-200 bg-white shadow-sm rounded-lg">
       <div className="flex items-center space-x-2 mb-4">
         <button onClick={() => navigate(-1)} className="text-gray-600 hover:text-gray-800 transition">
-            <i className="bi bi-arrow-left text-2xl"></i>
+            <i className="bi bi-arrow-left text-2xl cursor-pointer"></i>
         </button>
         <h1 className="text-2xl font-extrabold text-[#2e7d32]">Similar Posts</h1>
       </div>
 
-      {/* Display the original post ID (username, id, etc.) for debugging */}
-      <p className="text-xs text-gray-500">
-          Viewing post details for: {username} / {postId}
-      </p>
 
       {renderPostCard(originalPost, true)}
 

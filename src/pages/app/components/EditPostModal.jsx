@@ -46,7 +46,7 @@ export default function EditPostModal({ isOpen, onClose, post, onUpdate }) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
+    <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50 p-4  h-full">
       <div className="bg-white p-6 rounded-xl shadow-2xl max-w-md w-full border border-gray-200">
         <h2 className="text-xl font-semibold mb-4 border-b pb-2 text-gray-800">
           Edit Post
@@ -85,7 +85,7 @@ export default function EditPostModal({ isOpen, onClose, post, onUpdate }) {
                       <button
                         type="button"
                         onClick={() => setSelectedCoatColor(color)}
-                        className={`block w-full text-left px-4 py-2 text-sm hover:bg-amber-50 ${
+                        className={`block w-full text-left px-4 py-2 text-sm hover:bg-amber-50 cursor-pointer ${
                           selectedCoatColor === color ? "bg-amber-100 font-semibold" : ""
                         }`}
                       >
@@ -117,13 +117,13 @@ export default function EditPostModal({ isOpen, onClose, post, onUpdate }) {
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300 transition"
+              className="cursor-pointer px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300 transition"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="px-4 py-2 text-sm font-medium text-white bg-amber-500 rounded-md hover:bg-amber-600 transition"
+              className="cursor-pointer px-4 py-2 text-sm font-medium text-white bg-amber-500 rounded-md hover:bg-amber-600 transition"
             >
               Save Changes
             </button>

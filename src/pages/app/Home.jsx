@@ -266,23 +266,17 @@ const merged = newPosts.sort((a, b) => {
     });
   };
 
-    // 7. UPDATED FUNCTION: Handle similarity search and navigation
-    const handleFindSimilarPosts = (targetPost) => {
-        if (!targetPost.id) {
-            console.error("Target post is missing ID.");
-            return;
-        }
-
-        navigate(`/similar-posts/${targetPost.username}/${targetPost.id}`, { 
-            state: { 
-                originalPost: targetPost,
-            } 
-        });
-    };
-
 
   return (
     <div className="max-w-[700px] space-y-4">
+            {isEditing && postToEdit && (
+              <EditPostModal
+                isOpen={isEditing}
+                onClose={() => setIsEditing(false)}
+                post={postToEdit}
+                onUpdate={handleUpdatePost}
+              />
+            )}
       <div className=" flex flex-1 flex-wrap sm:flex-nowrap max-w-[700px]  justify-between items-stretch gap-2">
         {userType !== "" && (
           <div
@@ -378,7 +372,7 @@ const merged = newPosts.sort((a, b) => {
                             : post.userPhoto || defaultImg
                         }
                         alt="Profile"
-                        className="w-14 h-14 rounded-full object-cover"
+                        className="w-17 h-17 rounded-full object-cover"
                       />
 
                       <div className="pl-2">
@@ -407,9 +401,11 @@ const merged = newPosts.sort((a, b) => {
                               : "Just now"}
                           </p>
                         </div>
-                          <div className="flex items-center gap-1">
+                          <div className="md:flex md:flex-row flex-col gap-1">
+                            <div className="flex items-center gap-1">
+
                           <span
-                            className={`text-xs p-1 border rounded-sm ${
+                            className={`text-[10px] p-1 border rounded-sm ${
                               post.status === "Stray Animal"
                                 ? "bg-red-100 text-red-700 border-red-300"
                                 : post.status === "Lost Pet"
@@ -419,37 +415,44 @@ const merged = newPosts.sort((a, b) => {
                           >
                             {post.status}
                           </span>
+
+
+                            {post.animalType && (
+                              <span className={`text-[10px] flex items-center p-1 border rounded-sm ${
+                              post.animalType === "Dog"
+                                ? "bg-blue-100 text-blue-700 border-blue-300"
+                                : post.animalType === "Cat"
+                                ? "bg-orange-100 text-orange-700 border-orange-300"
+                                : "bg-gray-100 text-gray-700 border-gray-300"
+                            }`}>
+                                {post.animalType}
+                              </span>
+                            )}
+                            </div>
                           {/* Dog characteristics */}
                           <div className="flex py-1 gap-1">
-                            <span className="text-xs p-1 border bg-green-100 text-green-700 border-green-300 rounded-sm">
-                              {post.coatColor}
-                            </span>
+
 
                             {post.breed && (
-                              <span className="text-xs p-1 border bg-green-100 text-green-700 border-green-300 rounded-sm">
+                              <span className="text-[10px] flex items-center  p-1 border bg-green-100 text-green-700 border-green-300 rounded-sm">
                                 {post.breed}
                               </span>
                             )}
+
+                            <span className="text-[10px] flex items-center  p-1 border bg-green-100 text-green-700 border-green-300 rounded-sm">
+                              {post.coatColor}
+                            </span>
                           </div>
+                          
                         </div>
 
 
                       </div>
+                      
                     </div>
 
                     {/* Edit/Delete Buttons */}
                     <div className="flex items-center gap-2">
-                        <button
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            // Correctly passing the full 'post' object 
-                            handleFindSimilarPosts(post); 
-                          }}
-                          className="block text-xs text-end text-gray-500 font-semibold underline hover:text-green-700 transition"
-                        >
-                          See similar posts
-                        </button>
                       {isOwner && (
                         <div className="relative flex flex-col items-end">
                           {/* Post Menu */}
@@ -504,8 +507,6 @@ const merged = newPosts.sort((a, b) => {
                   <Link to={`/${post.username}/status/${post.id}`}>
                     {/* Description */}
                     <p>{post.description}</p> 
-
-
                     {/* Photo */}
                     <div className="flex justify-center p-3">
                       <img

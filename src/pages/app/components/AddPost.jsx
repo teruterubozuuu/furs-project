@@ -18,6 +18,7 @@ export default function AddPost({ isOpen, onClose }) {
   const [description, setDescription] = useState("");
   const [breed, setBreed] = useState("");
   const [selectedReport, setSelectedReport] = useState("Report Type");
+  const [selectedAnimal, setSelectedAnimal] = useState("Animal Type");
   const [selectedCoatColor, setSelectedCoatColor] = useState("Coat/Color");
   const [location, setLocation] = useState(null);
   const [photo, setPhoto] = useState(null);
@@ -35,6 +36,7 @@ export default function AddPost({ isOpen, onClose }) {
     "Tricolor Mixed",
   ];
   const reportType = ["Stray Animal", "Lost Pet", "Unknown"];
+  const animalType = ["Dog", "Cat"];
 
   const handlePhotoChange = (e) => {
     const file = e.target.files[0];
@@ -66,6 +68,36 @@ const handleSubmit = async (e) => {
 
   if (!photo) {
     alert("Please upload a photo.");
+    setIsSubmitting(false);
+    return;
+  }
+
+  if (selectedReport === "Report Type") {
+    alert("Please select a report type.");
+    setIsSubmitting(false);
+    return;
+  }
+
+  if (selectedAnimal === "Animal Type") {
+    alert("Please select an animal type.");
+    setIsSubmitting(false);
+    return;
+  }
+
+  if (selectedCoatColor === "Coat/Color") {
+    alert("Please select a coat or color.");
+    setIsSubmitting(false);
+    return;
+  }
+
+  if (location === null) {
+    alert("Please set a location.");
+    setIsSubmitting(false);
+    return;
+  }
+
+  if (breed.trim() === "") {
+    alert("Please enter the breed of the animal.");
     setIsSubmitting(false);
     return;
   }
@@ -110,6 +142,7 @@ const plainLocation =
     photoURL,
     breed,
     coatColor: selectedCoatColor,
+    animalType: selectedAnimal,
     description,
     status: selectedReport,
     location: plainLocation,
@@ -131,6 +164,7 @@ const plainLocation =
     setBreed("");
     setSelectedCoatColor("Coat/Color");
     setSelectedReport("Report Type");
+    setSelectedAnimal("Animal Type");
     setDescription("");
     setLocation(null);
   }
@@ -169,6 +203,27 @@ const plainLocation =
                           <button
                             type="button"
                             onClick={() => setSelectedReport(type)}
+                            className="cursor-pointer text-gray-700 hover:bg-gray-100 block w-full text-left px-4 py-2 text-sm"
+                          >
+                            {type}
+                          </button>
+                        </MenuItem>
+                      ))}
+                    </div>
+                  </MenuItems>
+                </Menu>
+                                <Menu as="div" className="relative inline-block">
+                  <MenuButton className="inline-flex border cursor-pointer hover:bg-yellow-100 border-gray-200 w-full justify-center gap-x-1.5 rounded-full bg-white/10 px-3 py-2 text-sm font-semibold text-amber-400">
+                    {selectedAnimal}
+                    <ChevronDownIcon className="-mr-1 size-5 text-amber-400" />
+                  </MenuButton>
+                  <MenuItems className="absolute left-0 z-10 mt-2 w-56 origin-top-right rounded-lg border border-gray-200 bg-white transition">
+                    <div className="py-1">
+                      {animalType.map((type) => (
+                        <MenuItem key={type}>
+                          <button
+                            type="button"
+                            onClick={() => setSelectedAnimal(type)}
                             className="cursor-pointer text-gray-700 hover:bg-gray-100 block w-full text-left px-4 py-2 text-sm"
                           >
                             {type}
