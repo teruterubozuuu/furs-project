@@ -75,7 +75,9 @@ export default function SimilarPosts() {
       setIsLoading(true);
       setError(null);
       
-      const serverUrl = `http://127.0.0.1:5001/furs-project-7a0a3/us-central1/api/similar-posts`;
+      const serverUrl = window.location.hostname === "localhost"
+    ? "http://127.0.0.1:5001/furs-project-7a0a3/us-central1/api/similar-posts" // Local emulator
+    : "https://us-central1-furs-project-7a0a3.cloudfunctions.net/api/similar-posts"; // Production
 
       try {
         const res = await fetch(serverUrl, {

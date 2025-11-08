@@ -61,7 +61,9 @@ export default function ViewPost() {
           }
 
           if (fullPostData.location?.lat && fullPostData.location?.lng) {
-            const functionBaseUrl = `http://127.0.0.1:5001/furs-project-7a0a3/us-central1/api`;
+            const functionBaseUrl = window.location.hostname === "localhost"
+    ? "http://127.0.0.1:5001/furs-project-7a0a3/us-central1/api" // Local emulator
+    : "https://us-central1-furs-project-7a0a3.cloudfunctions.net/api"; // Production
             try {
               const res = await fetch(
                 `${functionBaseUrl}/reverse?lat=${fullPostData.location.lat}&lon=${fullPostData.location.lng}`

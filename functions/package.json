@@ -1,5 +1,6 @@
 {
   "name": "functions",
+  "type":"module",
   "description": "Cloud Functions for Firebase",
   "scripts": {
     "lint": "",
@@ -12,7 +13,6 @@
   "engines": {
     "node": "20"
   },
-  "type": "module",
   "main": "index.js",
   "dependencies": {
     "cors": "^2.8.5",

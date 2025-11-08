@@ -359,6 +359,6 @@ app.post("/similar-posts", async (req, res) => {
 });
 
 
-app.post("/api/similarity", async (req, res) => { res.json({ similarity: [0] }); });
+app.post("/similarity", async (req, res) => { res.json({ similarity: [0] }); });
 
 export const api = functions.https.onRequest(app);
