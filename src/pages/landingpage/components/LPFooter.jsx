@@ -50,7 +50,7 @@ export default function LPFooter() {
                 className="w-40 bg-white p-2 rounded-md"
               />
             </a>
-            <p className="text-gray-300 text-sm">
+            <p className="text-white text-sm">
               Find, Unite, and Rescue Strays. A community-driven platform to
               help stray animals.
             </p>
@@ -59,7 +59,7 @@ export default function LPFooter() {
           {/* Column 2: Contact Information */}
           <div className="space-y-4">
             <h3 className="text-lg font-semibold text-white">Contact Us</h3>
-            <ul className="space-y-2 text-gray-300 text-sm">
+            <ul className="space-y-2 text-white text-sm">
               <li>
                 <a href="mailto:contact@furs.com" className="hover:text-white">
                   Email: contact@furs.com
@@ -87,32 +87,16 @@ export default function LPFooter() {
                 href="https://www.facebook.com/profile.php?id=61578199832740"
                 aria-label="Facebook"
                 target="_blank"
-                className="text-gray-300 hover:text-white transition-colors"
+                className="text-white bg-transparent hover:text-white transition-colors border border-white p-2 rounded-lg hover:bg-green-900"
               >
                 <FacebookIcon />
-              </a>
-              <a
-                href="#"
-                aria-label="Twitter"
-                target="_blank"
-                className="text-gray-300 hover:text-white transition-colors"
-              >
-                <TwitterIcon />
-              </a>
-              <a
-                href="#"
-                aria-label="Instagram"
-                target="_blank"
-                className="text-gray-300 hover:text-white transition-colors"
-              >
-                <InstagramIcon />
               </a>
             </div>
           </div>
         </div>
 
         {/* Bottom Bar: Copyright */}
-        <div className="border-t border-gray-600 mt-10 pt-6 text-center text-gray-400 text-sm">
+        <div className="border-t border-gray-200 mt-10 pt-6 text-center text-whitetext-sm">
           <p>&copy; {new Date().getFullYear()} F.U.R.S. All rights reserved.</p>
         </div>
       </div>

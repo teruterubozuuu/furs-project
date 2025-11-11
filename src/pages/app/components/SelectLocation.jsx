@@ -255,18 +255,18 @@ export default function SelectLocation({ onClose, onSelect }) {
 
   return (
     <div className="fixed inset-0 flex items-center justify-center bg-black/40 z-[999]">
-      <div className="bg-white rounded-2xl shadow-lg w-[90%] max-w-lg p-5 relative animate-fadeIn">
+      <div className="bg-white rounded-2xl shadow-lg max-w-lg p-5 relative animate-fadeIn m-3">
         {/* header */}
         <div className="flex justify-between items-center mb-3">
           <div>
-<h2 className="font-semibold text-lg text-green-700 flex items-center gap-2">
-  <i className="bi bi-geo-alt-fill text-[#fbc02d]"></i>
-  Select Location
-</h2>
-<p className="text-gray-500 text-xs italic">
-  Specify the location where the stray animal was spotted.  
-  For lost pets, indicate where the animal was last seen.
-</p>
+            <h2 className="font-semibold text-lg text-green-700 flex items-center gap-2">
+              <i className="bi bi-geo-alt-fill text-[#fbc02d]"></i>
+              Select Location
+            </h2>
+            <p className="text-gray-500 text-xs italic">
+              Specify the location where the stray animal was spotted. For lost
+              pets, indicate where the animal was last seen.
+            </p>
           </div>
 
           <button
@@ -307,7 +307,7 @@ export default function SelectLocation({ onClose, onSelect }) {
         </div>
 
         {/* manual search */}
-        <div className="flex gap-2 mb-3">
+        <div className="flex flex-wrap gap-2 mb-3">
           <input
             type="text"
             value={manualInput}
@@ -408,7 +408,7 @@ export default function SelectLocation({ onClose, onSelect }) {
                 showToast("Please select a location first.", "confirm");
                 return;
               }
-              onSelect({...position,landmark});
+              onSelect({ ...position, landmark });
             }}
             className="bg-green-700 text-white px-4 py-2 rounded-lg hover:bg-green-800 transition text-sm cursor-pointer"
           >

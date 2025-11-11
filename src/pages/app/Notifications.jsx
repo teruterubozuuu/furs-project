@@ -37,7 +37,7 @@ export default function Notifications() {
     } else if (notif.type === "rating") {
 
       if (notif.senderId) {
-        navigate(`/profile/${user.uid}`); 
+        navigate(`/profile/${notif.senderId}`); 
       }
     }
   } catch (error) {
@@ -58,20 +58,21 @@ export default function Notifications() {
   };
 
   return (
-    <div className="xl:min-w-[650px] border border-gray-200 bg-white rounded-lg p-7 min-h-screen">
-      <h1 className="text-xl text-[#2e7d32] font-bold mb-4">Notifications</h1>
+
+    <div className="xl:min-w-[650px] border border-gray-200 bg-white rounded-lg p-7 h-screen ">
+      <h1 className="text-xl text-[#2e7d32] font-bold mb-4 w-screen">Notifications</h1>
 
       {notifications.length === 0 ? (
-        <p className="text-gray-500">No notifications yet.</p>
+        <p className="text-gray-500 w-screen">No notifications yet.</p>
       ) : (
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-3 ">
           {notifications.map((notif) => (
             <div
               key={notif.id}
-              className={`flex items-center gap-3 p-3 border rounded-lg cursor-pointer transition ${
+              className={`flex items-center gap-3 p-3 border border-gray-200 rounded-lg cursor-pointer transition ${
                 notif.read ? "bg-gray-50" : "bg-[#e8f5e9]"
               }`}
-              onClick={() => handleNotificationClick(notif)} // ✅ now triggers navigation
+              onClick={() => handleNotificationClick(notif)} 
             >
               <img
                 src={notif.senderPhoto || defaultImg}
@@ -92,5 +93,6 @@ export default function Notifications() {
         </div>
       )}
     </div>
+
   );
 }

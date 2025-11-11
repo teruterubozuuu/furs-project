@@ -1,8 +1,8 @@
 import { Navigate, useLocation } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../context/AuthContext.jsx";
 import { useEffect, useState } from "react";
 import { doc, getDoc } from "firebase/firestore";
-import { db } from "../firebase/config";
+import { db } from "../firebase/config.js";
 
 export default function RedirectIfAuthenticated({ children }) {
   const { user, loading: authLoading } = useAuth(); 
@@ -15,6 +15,11 @@ export default function RedirectIfAuthenticated({ children }) {
       if (!user) {
         setLoading(false);
         return;
+      }
+
+      if (!user.emailVerified) {
+          setLoading(false);
+          return;
       }
 
       try {
@@ -34,7 +39,7 @@ export default function RedirectIfAuthenticated({ children }) {
 
   if (authLoading || loading) return null;
 
-  if (user && userRole) {
+  if (user && user.emailVerified && userRole) {
     if (
       ["/", "/login", "/signup"].includes(location.pathname)
     ) {

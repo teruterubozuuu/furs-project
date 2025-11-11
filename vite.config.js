@@ -27,17 +27,17 @@ export default defineConfig({
         start_url: '/',
         icons: [
           {
-            src: 'logo_furs.png', // Create this file in /public
+            src: 'furs_logo_icon.png', // Create this file in /public
             sizes: '192x192',
             type: 'image/png'
           },
           {
-            src: 'logo_furs.png', // Create this file in /public
+            src: 'furs_logo_icon.png', // Create this file in /public
             sizes: '512x512',
             type: 'image/png'
           },
           {
-            src: 'logo_furs.png',
+            src: 'furs_logo_icon.png',
             sizes: '512x512',
             type: 'image/png',
             purpose: 'maskable' // Recommended for Android adaptive icons

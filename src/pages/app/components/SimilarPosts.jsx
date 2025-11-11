@@ -96,7 +96,7 @@ export default function SimilarPosts() {
 
       } catch (err) {
         console.error("Error finding similar posts:", err);
-        setError(`Failed to fetch results. Ensure your server is running. (${err.message})`);
+        setError(`Failed to fetch results.`);
       } finally {
         setIsLoading(false);
       }
@@ -115,9 +115,11 @@ export default function SimilarPosts() {
   // Display Logic
   if (error) {
     return (
-      <div className="p-8 text-center text-red-600 bg-red-50 rounded-lg max-w-[700px] mx-auto mt-8">
-        <h2 className="text-xl font-bold mb-2">Error</h2>
-        <p>{error}</p>
+      <div className=" p-3 bg-white shadow-sm border border-gray-200 rounded-lg max-w-[700px] mx-auto">
+        <div className=" w-[650px] p-8 text-center text-red-600">
+          <h2 className="text-xl text-center font-bold mb-2 ">Error</h2>
+          <p>{error}</p>
+        </div>
       </div>
     );
   }

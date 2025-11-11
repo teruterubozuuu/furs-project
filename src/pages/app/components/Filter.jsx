@@ -4,25 +4,38 @@ import React, { useState } from "react";
 export default function Filter({ isOpen, onClose, onApply }) {
   const [reportType, setReportType] = useState("");
   const [selectedColors, setSelectedColors] = useState([]);
+  const [filterAnimalType, setFilterAnimalType] = useState("");
 
   if (!isOpen) return null;
 
   const handleColorChange = (color) => {
     setSelectedColors((prev) =>
-      prev.includes(color)
-        ? prev.filter((c) => c !== color)
-        : [...prev, color]
+      prev.includes(color) ? prev.filter((c) => c !== color) : [...prev, color]
     );
   };
 
   const handleApply = () => {
-    onApply({ reportType, selectedColors });
+    onApply({ reportType, selectedColors, filterAnimalType });
     onClose();
   };
 
+  const handleReset = () =>{
+    setReportType("");
+    setSelectedColors([]);
+    setFilterAnimalType("");
+
+        onApply({ 
+      reportType: "", 
+      selectedColors: [], 
+      filterAnimalType: "" 
+    });
+
+  onClose();
+  }
+
   return (
     <div className="fixed inset-0 z-50 bg-black/30 flex justify-center h-full text-[#212121] text-start">
-      <div className="bg-[#fefefe] p-6 rounded-md shadow-lg w-full max-h-[520px] max-w-md relative m-4 overflow-y-auto">
+      <div className="bg-[#fefefe] p-6 rounded-md shadow-lg w-full max-h-[620px] max-w-md relative m-4 overflow-y-auto">
         <div className="flex items-center justify-between pb-5">
           <h1 className="font-semibold text-xl text-[#2e7d32]">Filter</h1>
           <button
@@ -53,6 +66,24 @@ export default function Filter({ isOpen, onClose, onApply }) {
             </div>
           </section>
 
+          <section>
+            <p className="font-medium">Animal Type</p>
+            <div className="flex flex-col gap-2 mt-2">
+              {["Dog", "Cat"].map((animalType) => (
+                <label key={animalType} className="flex gap-1 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="animalType"
+                    value={animalType}
+                    checked={filterAnimalType === animalType}
+                    onChange={(e) => setFilterAnimalType(e.target.value)}
+                  />
+                  <span>{animalType}</span>
+                </label>
+              ))}
+            </div>
+          </section>
+
           {/* Coat / Color */}
           <section>
             <p className="font-medium">Coat/Color</p>
@@ -77,12 +108,20 @@ export default function Filter({ isOpen, onClose, onApply }) {
             ))}
           </section>
 
+<div className="flex gap-2">
           <button
             onClick={handleApply}
             className="w-full bg-[#2e7d32] text-white rounded-sm py-2 cursor-pointer"
           >
             Apply
           </button>
+          <button
+          onClick={handleReset}
+            className="w-full bg-gray-300 text-gray-600 rounded-sm py-2 cursor-pointer">
+            Reset
+          </button>
+</div>
+
         </div>
       </div>
     </div>

@@ -25,7 +25,7 @@ const app = express();
 
 // Enable CORS for all routes (defined early)
 app.use(cors({
-    origin: ["http://localhost:5173", "*"],
+    origin: ["http://localhost:5173", "https://furs-project-7a0a3.web.app"],
     methods: "*",
     allowedHeaders: "*",
     credentials: false,
@@ -264,8 +264,8 @@ app.post("/similar-posts", async (req, res) => {
         const weights = {
             location: 0.20, 
             aiDescription: 0.20, 
-            color: 0.15,
-            breed: 0.20, 
+            color: 0.17,
+            breed: 0.18, 
             animalType: 0.15, 
             status: 0.10 // Total: 1.00
         };

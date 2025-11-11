@@ -173,8 +173,9 @@ const plainLocation =
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/20 h-screen">
-      <div className="flex justify-center text-[#212121] p-3 text-start">
+<div 
+        className="fixed inset-0 bg-black/20 h-screen w-screen overflow-y-auto z-1000000" // 👈 Use an extremely high z-index to beat Leaflet
+    >      <div className="flex justify-center text-[#212121] p-3 text-start">
         <div className="bg-[#fefefe] px-6 py-3 rounded-md flex justify-center w-full shadow-lg max-w-lg relative my-6">
           <form className="w-full" onSubmit={handleSubmit}>
             <div className="flex justify-start pb-2">

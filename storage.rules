@@ -1,12 +1,23 @@
 rules_version = '2';
-
-// Craft rules based on data in your Firestore database
-// allow write: if firestore.get(
-//    /databases/(default)/documents/users/$(request.auth.uid)).data.isAdmin;
 service firebase.storage {
   match /b/{bucket}/o {
+    
+    // Global Read Rule: Allows anyone to read/view files. (KEEP THIS)
     match /{allPaths=**} {
-      allow read, write: if false;
+      allow read;
+    }
+
+    // Specific WRITE Rule for Profile Photos (KEEP THIS)
+    match /users/{userId}/profile.jpg {
+      // User must be logged in AND the userId in the path must match the logged-in user's UID.
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // ✨ NEW RULE: Specific WRITE Rule for Post Photos
+    match /posts/{userId}/{allFiles=**} {
+      // User must be logged in AND the userId in the path must match the logged-in user's UID.
+      // This prevents User A from uploading files into User B's post folder.
+      allow write: if request.auth != null && request.auth.uid == userId;
     }
   }
 }

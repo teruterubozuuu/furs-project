@@ -20,6 +20,8 @@ import defaultImg from "../../assets/default_img.jpg";
 import { OrbitProgress } from "react-loading-indicators";
 import Filter from "./components/Filter";
 import { useAuth } from "../../context/AuthContext";
+import { confirmAlert } from "react-confirm-alert";
+import "react-confirm-alert/src/react-confirm-alert.css";
 
 const getCollectionName = (postType) => {
   if (postType === "Stray Animal") return "stray_animal_posts";
@@ -41,13 +43,14 @@ export default function Home() {
   const navigate = useNavigate();
 
   const [currentUserProfile, setCurrentUserProfile] = useState({
-    photoURL: defaultImg,
+    photoURL: user?.photoURL || defaultImg,
     username: user?.displayName || "Guest",
   });
 
   const [filters, setFilters] = useState({
     reportType: "",
     selectedColors: [],
+    filterAnimalType:"",
   });
 
   const handleLike = async (postId, postType) => {
@@ -91,8 +94,8 @@ export default function Home() {
     }
   };
 
-  const handleApplyFilter = ({ reportType, selectedColors }) => {
-    setFilters({ reportType, selectedColors });
+  const handleApplyFilter = ({ reportType, selectedColors, filterAnimalType }) => {
+    setFilters({ reportType, selectedColors, filterAnimalType });
   };
 
   // 1. FETCH CURRENT USER PROFILE DATA
@@ -105,7 +108,7 @@ export default function Home() {
         if (userDoc.exists()) {
           const data = userDoc.data();
           setCurrentUserProfile({
-            photoURL: data.profilePhoto || defaultImg,
+            photoURL: data.profilePhoto || user?.photoURL || defaultImg,
             username: data.username || user.displayName,
           });
           setUserType(data.userType || "");
@@ -148,29 +151,42 @@ export default function Home() {
   };
 
   // 3. DELETE FUNCTIONALITY
-  const handleDeletePost = async (postId, postType) => {
-    if (!window.confirm("Are you sure you want to delete this post?")) {
-      return;
-    }
+  const handleDeletePost = (postId, postType) => {
+    confirmAlert({
+      title: "Delete Post",
+      message: "Are you sure you want to delete this post?",
+      buttons: [
+        {
+          label: "Yes",
+          onClick: async () => {
+            const collectionName = getCollectionName(postType);
+            if (!collectionName) {
+              console.error("Unknown post type:", postType);
+              return;
+            }
 
-    const collectionName = getCollectionName(postType);
-    if (!collectionName) {
-      console.error("Unknown post type:", postType);
-      return;
-    }
+            try {
+              const postRef = doc(db, collectionName, postId);
+              await deleteDoc(postRef);
 
-    try {
-      const postRef = doc(db, collectionName, postId);
-      await deleteDoc(postRef);
-
-      setPosts((prevPosts) => prevPosts.filter((post) => post.id !== postId));
-      console.log(
-        `Post ${postId} deleted successfully from ${collectionName}.`
-      );
-    } catch (error) {
-      console.error("Error deleting post:", error);
-      alert("Failed to delete post. Please try again.");
-    }
+              setPosts((prevPosts) =>
+                prevPosts.filter((post) => post.id !== postId)
+              );
+              console.log(
+                `Post ${postId} deleted successfully from ${collectionName}.`
+              );
+            } catch (error) {
+              console.error("Error deleting post:", error);
+              alert("Failed to delete post. Please try again.");
+            }
+          },
+        },
+        {
+          label: "No",
+          onClick: () => console.log("Post deletion cancelled."),
+        },
+      ],
+    });
   };
 
   // 4. FETCH ALL POSTS (FEED CONTENT)
@@ -189,97 +205,117 @@ export default function Home() {
     };
   }, [user]);
 
-// 5. HELPER: Handle snapshot updates
+  // 5. HELPER: Handle snapshot updates (CONSOLIDATED)
   const handleSnapshot = async (snapshot) => {
-    const newPosts = await Promise.all(
-      snapshot.docs.map(async (docSnap) => {
-        const data = docSnap.data();
-        let isLikedByUser = false;
+    // Base URL for the Firebase Function proxy
+    const functionBaseUrl =
+      window.location.hostname === "localhost"
+        ? "http://127.0.0.1:5001/furs-project-7a0a3/us-central1/api" // Local emulator
+        : "https://us-central1-furs-project-7a0a3.cloudfunctions.net/api"; // Production
 
-        // Fetch like status (Fast Firestore check)
-        if (user?.uid) {
+    const newPostsPromises = snapshot.docs.map(async (docSnap) => {
+      const data = docSnap.data();
+      let isLikedByUser = false;
+      let address = "Location not available";
+
+      // 1. Fetch like status
+      if (user?.uid) {
+        if (Object.keys(db).length === 0) {
+          console.warn(
+            "Firebase not fully initialized (db is mocked). Skipping data fetch."
+          );
+        } else {
           const likeRef = doc(db, "posts", docSnap.id, "likes", user.uid);
           const likeSnap = await getDoc(likeRef);
           isLikedByUser = likeSnap.exists();
         }
+      }
 
-        // Return the post data immediately without the address
-        return {
-          id: docSnap.id,
-          ...data,
-          type: "General", // Changed from 'type' to a fixed type for this example
-          isLikedByUser,
-          // Set initial address to a placeholder
-          address: data.location?.lat ? "Fetching address..." : "No coordinates",
-        };
-      })
-    );
+      // 2. Fetch Address
+      if (data.location?.lat && data.location?.lng) {
+        try {
+          const res = await fetch(
+            `${functionBaseUrl}/reverse?lat=${data.location.lat}&lon=${data.location.lng}`
+          );
 
-    
+          if (!res.ok) {
+            throw new Error(`HTTP error! status: ${res.status}`);
+          }
 
+          const json = await res.json();
+          address = json.display_name || "Address not found";
+        } catch (error) {
+          console.error("Function/Reverse geocoding error:", error);
+          address = "Address error";
+        }
+      }
 
+      return {
+        id: docSnap.id,
+        ...data,
+        type: "General",
+        isLikedByUser,
+        address,
+      };
+    });
 
-const merged = newPosts.sort((a, b) => {
+    const newPosts = await Promise.all(newPostsPromises);
+
+    // Sort logic
+    const merged = newPosts.sort((a, b) => {
       const aDate = a.createdAt?.toDate?.() || new Date(0);
       const bDate = b.createdAt?.toDate?.() || new Date(0);
       return bDate - aDate;
     });
-    
+
     setPosts(merged);
     setIsLoading(false);
-
-    fetchAddressesForPosts(merged);
-
-    
   };
 
-  // 6. NEW HELPER: Fetch addresses using the Firebase Function proxy
-  const fetchAddressesForPosts = async (currentPosts) => {
-    const promises = currentPosts.map(async (post) => {
-      if (!post.location?.lat) return post; 
+  const handleCopyLink = (postIdToCopy) => {
+    const postUrl = `${window.location.origin}/${
+      posts.find((p) => p.id === postIdToCopy)?.username
+    }/status/${postIdToCopy}`;
 
-      //const functionUrl = '/api/reverse'; 
-      // For local testing: 
-      const functionBaseUrl = window.location.hostname === "localhost"
-    ? "http://127.0.0.1:5001/furs-project-7a0a3/us-central1/api" // Local emulator
-    : "https://us-central1-furs-project-7a0a3.cloudfunctions.net/api"; // Production
-      
-      try {
-        // 2. Append the Express route '/reverse' and the query parameters
-        const res = await fetch(
-          `${functionBaseUrl}/reverse?lat=${post.location.lat}&lon=${post.location.lng}`
-        );
+    if (!postUrl.includes("status")) {
+      const fallbackUrl = `${window.location.origin}/view-post/${postIdToCopy}`;
+      console.warn("Using fallback post URL:", fallbackUrl);
+      navigator.clipboard
+        .writeText(fallbackUrl)
+        .then(() => {
+          alert("Post link copied to clipboard!");
+          setOpenMenuId(null);
+        })
+        .catch((err) => {
+          console.error("Failed to copy link: ", err);
+          alert("Failed to copy link. Please try again or copy manually.");
+        });
+      return;
+    }
 
-        const json = await res.json();
-        const address = json.display_name || "Address not found";
-        return { ...post, address };
-      } catch (error) {
-        console.error("Function/Reverse geocoding error:", error);
-        return { ...post, address: "Address error" };
-      }
-    });
-
-    const updatedPosts = await Promise.all(promises);
-    
-
-    setPosts(prevPosts => {
-        const map = new Map(updatedPosts.map(p => [p.id, p]));
-        return prevPosts.map(p => map.get(p.id) || p);
-    });
+    navigator.clipboard
+      .writeText(postUrl)
+      .then(() => {
+        alert("Post link copied to clipboard!");
+        setOpenMenuId(null);
+      })
+      .catch((err) => {
+        console.error("Failed to copy link: ", err);
+        alert("Failed to copy link. Please try again or copy manually.");
+      });
   };
-
 
   return (
-    <div className="max-w-[700px] space-y-4">
-            {isEditing && postToEdit && (
-              <EditPostModal
-                isOpen={isEditing}
-                onClose={() => setIsEditing(false)}
-                post={postToEdit}
-                onUpdate={handleUpdatePost}
-              />
-            )}
-      <div className=" flex flex-1 flex-wrap sm:flex-nowrap max-w-[700px]  justify-between items-stretch gap-2">
+    <div className="max-w-[650px] xl:w-screen space-y-4">
+      {isEditing && postToEdit && (
+        <EditPostModal
+          isOpen={isEditing}
+          onClose={() => setIsEditing(false)}
+          post={postToEdit}
+          onUpdate={handleUpdatePost}
+        />
+      )}
+      <div className=" flex flex-1 flex-wrap sm:flex-nowrap max-w-[650px] justify-between items-stretch gap-2">
         {userType !== "" && (
           <div
             className={
@@ -339,13 +375,19 @@ const merged = newPosts.sort((a, b) => {
               filters.selectedColors.length === 0 ||
               filters.selectedColors.includes(post.coatColor);
 
-            return matchesReportType && matchesColor;
+              const matchesAnimalType =
+    !filters.filterAnimalType ||
+    post.animalType === filters.filterAnimalType;
+
+            return matchesReportType && matchesColor && matchesAnimalType;
           });
 
           if (filteredPosts.length === 0) {
             return (
-              <div className="flex w-[650px] justify-center text-gray-500 italic font-medium text-xl mt-5">
-                <p>No matching posts...</p>
+              <div className="w-full max-w-[650px] md:w-[650px] mx-auto px-4">
+                <div className="flex justify-center text-gray-500 italic font-medium text-xl mt-5">
+                  <p>No matching posts...</p>
+                </div>
               </div>
             );
           }
@@ -367,15 +409,17 @@ const merged = newPosts.sort((a, b) => {
                   <div className="flex justify-between items-start pb-2">
                     <div className="flex h-full items-center ">
                       {/* 🚨 FIX: Post Avatar */}
+                      <Link to={profilePath}>
                       <img
                         src={
                           isOwner
-                            ? currentUserProfile.photoURL
+                            ? user?.photoURL || currentUserProfile.photoURL
                             : post.userPhoto || defaultImg
                         }
                         alt="Profile"
                         className="w-17 h-17 rounded-full object-cover"
                       />
+                      </Link>
 
                       <div className="pl-2">
                         <div className="flex items-center gap-2 flex-wrap">
@@ -403,38 +447,36 @@ const merged = newPosts.sort((a, b) => {
                               : "Just now"}
                           </p>
                         </div>
-                          <div className="md:flex md:flex-row flex-col gap-1">
-                            <div className="flex items-center gap-1">
-
-                          <span
-                            className={`text-[10px] p-1 border rounded-sm ${
-                              post.status === "Stray Animal"
-                                ? "bg-red-100 text-red-700 border-red-300"
-                                : post.status === "Lost Pet"
-                                ? "bg-yellow-100 text-yellow-700 border-yellow-300"
-                                : "bg-gray-100 text-gray-700 border-gray-300"
-                            }`}
-                          >
-                            {post.status}
-                          </span>
-
+                        <div className="md:flex md:flex-row flex-col gap-1">
+                          <div className="flex items-center gap-1">
+                            <span
+                              className={`text-[10px] p-1 border rounded-sm ${
+                                post.status === "Stray Animal"
+                                  ? "bg-red-100 text-red-700 border-red-300"
+                                  : post.status === "Lost Pet"
+                                  ? "bg-yellow-100 text-yellow-700 border-yellow-300"
+                                  : "bg-gray-100 text-gray-700 border-gray-300"
+                              }`}
+                            >
+                              {post.status}
+                            </span>
 
                             {post.animalType && (
-                              <span className={`text-[10px] flex items-center p-1 border rounded-sm ${
-                              post.animalType === "Dog"
-                                ? "bg-blue-100 text-blue-700 border-blue-300"
-                                : post.animalType === "Cat"
-                                ? "bg-orange-100 text-orange-700 border-orange-300"
-                                : "bg-gray-100 text-gray-700 border-gray-300"
-                            }`}>
+                              <span
+                                className={`text-[10px] flex items-center p-1 border rounded-sm ${
+                                  post.animalType === "Dog"
+                                    ? "bg-blue-100 text-blue-700 border-blue-300"
+                                    : post.animalType === "Cat"
+                                    ? "bg-orange-100 text-orange-700 border-orange-300"
+                                    : "bg-gray-100 text-gray-700 border-gray-300"
+                                }`}
+                              >
                                 {post.animalType}
                               </span>
                             )}
-                            </div>
+                          </div>
                           {/* Dog characteristics */}
                           <div className="flex py-1 gap-1">
-
-
                             {post.breed && (
                               <span className="text-[10px] flex items-center  p-1 border bg-green-100 text-green-700 border-green-300 rounded-sm">
                                 {post.breed}
@@ -445,12 +487,8 @@ const merged = newPosts.sort((a, b) => {
                               {post.coatColor}
                             </span>
                           </div>
-                          
                         </div>
-
-
                       </div>
-                      
                     </div>
 
                     {/* Edit/Delete Buttons */}
@@ -478,6 +516,16 @@ const merged = newPosts.sort((a, b) => {
                                   onClick={(e) => {
                                     e.preventDefault();
                                     e.stopPropagation();
+                                    handleCopyLink(post.id);
+                                  }}
+                                  className="cursor-pointer text-xs text-start pl-3 text-gray-600 w-full hover:bg-gray-200 py-2"
+                                >
+                                  Copy Link
+                                </button>
+                                <button
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
                                     handleEditPost(post);
                                     setOpenMenuId(null);
                                   }}
@@ -501,14 +549,12 @@ const merged = newPosts.sort((a, b) => {
                           </div>
                         </div>
                       )}
-                      
                     </div>
-                    
                   </div>
 
                   <Link to={`/${post.username}/status/${post.id}`}>
                     {/* Description */}
-                    <p>{post.description}</p> 
+                    <p>{post.description}</p>
                     {/* Photo */}
                     <div className="flex justify-center p-3">
                       <img
@@ -519,17 +565,21 @@ const merged = newPosts.sort((a, b) => {
                     </div>
 
                     {/* Location */}
-                                          {post.location?.landmark && (
-                        <p className="mt-1 italic text-gray-500">
-                          <span className="font-semibold text-gray-500">
-                            Landmark:
-                          </span>{" "}
-                          {post.location.landmark}
-                        </p>
-                      )}
+                    {post.location?.landmark && (
+                      <p className="mt-1 italic text-gray-500">
+                        <span className="font-semibold text-gray-500">
+                          Landmark:
+                        </span>{" "}
+                        {post.location.landmark}
+                      </p>
+                    )}
                     <div className="py-1 text-sm text-gray-500">
                       {post.address ? (
-                       <p className="italic"> <span className="font-semibold">Address:</span>  {post.address}</p>
+                        <p className="italic">
+                          {" "}
+                          <span className="font-semibold">Address:</span>{" "}
+                          {post.address}
+                        </p>
                       ) : post.location ? (
                         <p className="italic">
                           Latitude: {post.location.lat.toFixed(5)}, Longitude:{" "}
@@ -538,7 +588,6 @@ const merged = newPosts.sort((a, b) => {
                       ) : (
                         <p className="italic">Location not available</p>
                       )}
-
                     </div>
                   </Link>
                 </div>

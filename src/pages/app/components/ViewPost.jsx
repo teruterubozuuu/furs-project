@@ -48,8 +48,8 @@ export default function ViewPost() {
         if (postSnap.exists()) {
           const postData = postSnap.data();
           // Merge ID and data immediately for local use
-          const fullPostData = { id: postSnap.id, ...postData }; 
-          
+          const fullPostData = { id: postSnap.id, ...postData };
+
           setPost(fullPostData); // Set the state
           setLikesCount(postData.likes || 0);
           setIsOwner(user?.uid === postData.userId);
@@ -61,9 +61,10 @@ export default function ViewPost() {
           }
 
           if (fullPostData.location?.lat && fullPostData.location?.lng) {
-            const functionBaseUrl = window.location.hostname === "localhost"
-    ? "http://127.0.0.1:5001/furs-project-7a0a3/us-central1/api" // Local emulator
-    : "https://us-central1-furs-project-7a0a3.cloudfunctions.net/api"; // Production
+            const functionBaseUrl =
+              window.location.hostname === "localhost"
+                ? "http://127.0.0.1:5001/furs-project-7a0a3/us-central1/api" // Local emulator
+                : "https://us-central1-furs-project-7a0a3.cloudfunctions.net/api"; // Production
             try {
               const res = await fetch(
                 `${functionBaseUrl}/reverse?lat=${fullPostData.location.lat}&lon=${fullPostData.location.lng}`
@@ -219,14 +220,18 @@ export default function ViewPost() {
       return;
     }
     if (!commentText.trim()) return;
+    
+const currentPhotoURL = userData?.profilePhoto || user?.photoURL || ""; 
+const currentUsername =
+      userData?.username || user?.displayName || "Anonymous";
 
     try {
       const commentRef = collection(db, "posts", postId, "comments");
       await addDoc(commentRef, {
         userId: user.uid,
-        username: userData?.username || "Anonymous",
+        username: currentUsername,
         postUsername: post?.username || "Unknown",
-        profilePhoto: userData?.profilePhoto || "",
+        profilePhoto: currentPhotoURL,
         text: commentText,
         timestamp: new Date(),
       });
@@ -235,9 +240,9 @@ export default function ViewPost() {
         ...prev,
         {
           userId: user.uid,
-          username: userData?.username || "Anonymous",
+          username: currentUsername,
           postUsername: post?.username || "Unknown",
-          profilePhoto: userData?.profilePhoto || "",
+          profilePhoto: currentPhotoURL,
           text: commentText,
           timestamp: new Date(),
         },
@@ -308,20 +313,34 @@ export default function ViewPost() {
   const profilePath =
     post?.userId === user?.uid ? "/profile" : `/profile/${post?.userId}`;
 
-        // 7. UPDATED FUNCTION: Handle similarity search and navigation
-    const handleFindSimilarPosts = (targetPost) => {
-        if (!targetPost.id) {
-            console.error("Target post is missing ID.");
-            return;
-        }
+  // 7. UPDATED FUNCTION: Handle similarity search and navigation
+  const handleFindSimilarPosts = (targetPost) => {
+    if (!targetPost.id) {
+      console.error("Target post is missing ID.");
+      return;
+    }
 
-        navigate(`/similar-posts/${targetPost.username}/${targetPost.id}`, { 
-            state: { 
-                originalPost: targetPost,
-            } 
-        });
-    };
+    navigate(`/similar-posts/${targetPost.username}/${targetPost.id}`, {
+      state: {
+        originalPost: targetPost,
+      },
+    });
+  };
 
+  const handleCopyLink = () => {
+    const postUrl = `${window.location.origin}/view-post/${postId}`;
+
+    navigator.clipboard
+      .writeText(postUrl)
+      .then(() => {
+        alert("Post link copied to clipboard!");
+        setOpenMenuId(null);
+      })
+      .catch((err) => {
+        console.error("Failed to copy link: ", err);
+        alert("Failed to copy link. Please try again or copy manually.");
+      });
+  };
 
   return (
     <div className="xl:min-w-[650px] border border-gray-200 bg-white rounded-lg p-7">
@@ -342,9 +361,9 @@ export default function ViewPost() {
 
       <div className="flex gap-3 items-center mb-5">
         <Link to="/home">
-          <i className="bi bi-arrow-left cursor-pointer text-lg"></i>
+          <i className="bi bi-arrow-left cursor-pointer text-lg hover:text-green-700"></i>
         </Link>
-        <h1 className="text-xl font-semibold">Post</h1>
+        <h1 className="text-xl font-semibold text-green-700">Post</h1>
       </div>
 
       {post ? (
@@ -352,18 +371,20 @@ export default function ViewPost() {
           {/* Header */}
           <div className="flex justify-between items-start pb-2">
             <div className="flex h-full items-center">
+              <Link to={profilePath}>
               <img
                 src={post.userPhoto || defaultImg}
                 alt="Profile"
                 className="w-17 h-17 rounded-full object-cover"
               />
+              </Link>
               <div className="pl-2">
                 <div className="flex items-center gap-2 flex-wrap">
                   <Link
                     to={profilePath}
                     className="text-base font-semibold hover:underline cursor-pointer"
                   >
-                    {post.username}
+                    <span>{post.username}</span>
                   </Link>
                   <p className="text-[11px] text-gray-600">
                     {post.createdAt?.toDate
@@ -379,50 +400,47 @@ export default function ViewPost() {
                   </p>
                 </div>
 
-                          <div className="md:flex md:flex-row flex-col gap-1">
-                            <div className="flex items-center gap-1">
+                <div className="md:flex md:flex-row flex-col gap-1">
+                  <div className="flex items-center gap-1">
+                    <span
+                      className={`text-[10px] p-1 border rounded-sm ${
+                        post.status === "Stray Animal"
+                          ? "bg-red-100 text-red-700 border-red-300"
+                          : post.status === "Lost Pet"
+                          ? "bg-yellow-100 text-yellow-700 border-yellow-300"
+                          : "bg-gray-100 text-gray-700 border-gray-300"
+                      }`}
+                    >
+                      {post.status}
+                    </span>
 
-                          <span
-                            className={`text-[10px] p-1 border rounded-sm ${
-                              post.status === "Stray Animal"
-                                ? "bg-red-100 text-red-700 border-red-300"
-                                : post.status === "Lost Pet"
-                                ? "bg-yellow-100 text-yellow-700 border-yellow-300"
-                                : "bg-gray-100 text-gray-700 border-gray-300"
-                            }`}
-                          >
-                            {post.status}
-                          </span>
+                    {post.animalType && (
+                      <span
+                        className={`text-[10px] flex items-center p-1 border rounded-sm ${
+                          post.animalType === "Dog"
+                            ? "bg-blue-100 text-blue-700 border-blue-300"
+                            : post.animalType === "Cat"
+                            ? "bg-orange-100 text-orange-700 border-orange-300"
+                            : "bg-gray-100 text-gray-700 border-gray-300"
+                        }`}
+                      >
+                        {post.animalType}
+                      </span>
+                    )}
+                  </div>
+                  {/* Dog characteristics */}
+                  <div className="flex py-1 gap-1">
+                    {post.breed && (
+                      <span className="text-[10px] flex items-center  p-1 border bg-green-100 text-green-700 border-green-300 rounded-sm">
+                        {post.breed}
+                      </span>
+                    )}
 
-
-                            {post.animalType && (
-                              <span className={`text-[10px] flex items-center p-1 border rounded-sm ${
-                              post.animalType === "Dog"
-                                ? "bg-blue-100 text-blue-700 border-blue-300"
-                                : post.animalType === "Cat"
-                                ? "bg-orange-100 text-orange-700 border-orange-300"
-                                : "bg-gray-100 text-gray-700 border-gray-300"
-                            }`}>
-                                {post.animalType}
-                              </span>
-                            )}
-                            </div>
-                          {/* Dog characteristics */}
-                          <div className="flex py-1 gap-1">
-
-
-                            {post.breed && (
-                              <span className="text-[10px] flex items-center  p-1 border bg-green-100 text-green-700 border-green-300 rounded-sm">
-                                {post.breed}
-                              </span>
-                            )}
-
-                            <span className="text-[10px] flex items-center  p-1 border bg-green-100 text-green-700 border-green-300 rounded-sm">
-                              {post.coatColor}
-                            </span>
-                          </div>
-                          
-                        </div>
+                    <span className="text-[10px] flex items-center  p-1 border bg-green-100 text-green-700 border-green-300 rounded-sm">
+                      {post.coatColor}
+                    </span>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -437,6 +455,12 @@ export default function ViewPost() {
 
                 {openMenuId === post.id && (
                   <div className="flex flex-col items-start border border-gray-200 bg-white w-[80px] rounded-md absolute top-5 right-0 z-10 shadow-sm">
+                    <button
+                      onClick={handleCopyLink}
+                      className="cursor-pointer text-xs text-start pl-3 text-gray-600 w-full hover:bg-gray-200 py-2"
+                    >
+                      Copy Link
+                    </button>
                     <button
                       onClick={() => {
                         handleEditPost(post);
@@ -460,17 +484,17 @@ export default function ViewPost() {
               </div>
             )}
           </div>
-                        <button
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            // Correctly passing the full 'post' object 
-                            handleFindSimilarPosts(post); 
-                          }}
-                          className="cursor-pointer text-[10px] text-start text-gray-500 font-semibold underline hover:text-green-700 transition"
-                        >
-                          See similar posts
-                        </button>
+          <button
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              // Correctly passing the full 'post' object
+              handleFindSimilarPosts(post);
+            }}
+            className="cursor-pointer text-[10px] text-start text-gray-500 font-semibold underline hover:text-green-700 transition"
+          >
+            See similar posts
+          </button>
           {/* Description */}
 
           <p className="text-gray-700">{post.description}</p>
@@ -482,6 +506,7 @@ export default function ViewPost() {
               alt="Posted"
               className="w-100 rounded-sm object-cover"
             />
+
           </div>
 
           {/* Location */}
@@ -492,7 +517,9 @@ export default function ViewPost() {
                 {post.location.landmark}
               </p>
             )}
-                        <p className="italic"><span className="font-semibold ">Address:</span>{" "} {address}</p>
+            <p className="italic">
+              <span className="font-semibold ">Address:</span> {address}
+            </p>
           </div>
 
           {/* Like, Comment, Rate */}
@@ -521,48 +548,62 @@ export default function ViewPost() {
 
             <div className="flex items-center gap-2 cursor-pointer hover:text-[#fbc02d]">
               <i className="bi bi-chat"></i>
-              <span className="xl:flex hidden">Comment</span>
+              <span>Comment</span>
             </div>
             <div
               className="flex items-center gap-2 cursor-pointer hover:text-[#fbc02d]"
               onClick={() => setIsRating(true)}
             >
               <i class="bi bi-star-half"></i>
-              <span className="xl:flex hidden">Rate</span>
+              <span >Rate</span>
             </div>
           </div>
 
           {/* comments section */}
           <div className="mt-4 flex flex-col gap-2">
-            {comments.map((comment) => (
-              <div key={comment.id} className="flex items-start gap-2">
-                <img
-                  src={comment.profilePhoto || defaultImg}
-                  alt="Profile"
-                  className="w-8 h-8 rounded-full object-cover"
-                />
-                <div className="flex flex-col">
-                  <div className="flex items-center gap-2">
-                    <span className="font-semibold text-sm">
-                      {comment.username}
-                    </span>
-                    <span className="text-xs text-gray-500 font-light">
-                      {comment.timestamp?.toDate
-                        ? comment.timestamp.toDate().toLocaleString("en-US", {
-                            year: "numeric",
-                            month: "short",
-                            day: "numeric",
-                            hour: "numeric",
-                            minute: "2-digit",
-                            hour12: true,
-                          })
-                        : "Just now"}{" "}
+            {comments.map((comment) => {
+              // ✨ NEW CODE: Calculate the correct path for THIS comment user
+              const userLinkPath =
+                comment.userId === user?.uid
+                  ? "/profile"
+                  : `/profile/${comment.userId}`;
+
+              return (
+                <div key={comment.id} className="flex items-start gap-2">
+                  <Link to={userLinkPath}>                  <img
+                    src={comment.profilePhoto || defaultImg}
+                    alt="Profile"
+                    className="w-8 h-8 rounded-full object-cover"
+                  /></Link>
+
+                  <div className="flex flex-col">
+                    <div className="flex items-center gap-2">
+                      <Link
+                        to={userLinkPath}
+                        className="font-semibold text-sm hover:underline"
+                      >
+                        {comment.username}
+                      </Link>
+                      <span className="text-xs text-gray-500 font-light">
+                        {comment.timestamp?.toDate
+                          ? comment.timestamp.toDate().toLocaleString("en-US", {
+                              year: "numeric",
+                              month: "short",
+                              day: "numeric",
+                              hour: "numeric",
+                              minute: "2-digit",
+                              hour12: true,
+                            })
+                          : "Just now"}{" "}
+                      </span>
+                    </div>
+                    <span className="text-gray-700 text-sm">
+                      {comment.text}
                     </span>
                   </div>
-                  <span className="text-gray-700 text-sm">{comment.text}</span>
                 </div>
-              </div>
-            ))}
+              );
+            })}
             <div className="flex gap-2 mt-2">
               <input
                 type="text"

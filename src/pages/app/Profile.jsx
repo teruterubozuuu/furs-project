@@ -18,7 +18,7 @@ import defaultImg from "../../assets/default_img.jpg";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { confirmAlert } from "react-confirm-alert";
 import "react-confirm-alert/src/react-confirm-alert.css";
-import { signOut } from "firebase/auth";
+import { signOut, updateProfile } from "firebase/auth";
 import { useNavigate, useParams } from "react-router-dom";
 import { Link } from "react-router-dom";
 
@@ -57,26 +57,22 @@ const StarRatingDisplay = ({ rating, count }) => {
   );
 };
 
-// Post Card Component 
+// Post Card Component
 const PostCard = ({ post }) => (
   <div className="border border-gray-200 p-4 rounded-lg shadow-sm bg-white space-y-3 mb-4">
      {" "}
     <div className="flex justify-between items-start">
       {" "}
       <p className="text-xs text-gray-500 font-medium">
-        Type: {" "}
-        <span className="font-semibold text-green-700">{post.postType}</span>
-        {" "}
-      </p>
-      {" "}
+        Type:{" "}
+        <span className="font-semibold text-green-700">{post.postType}</span>{" "}
+      </p>{" "}
       {post.createdAt && (
         <p className="text-xs text-gray-400">
-           {post.createdAt.toDate().toLocaleDateString()}{" "}
+          {post.createdAt.toDate().toLocaleDateString()}{" "}
         </p>
-      )}
-      {" "}
-    </div>
-    {" "}
+      )}{" "}
+    </div>{" "}
     {post.photoURL && (
       <div className="flex justify-center p-2 bg-gray-50 rounded-lg">
         {" "}
@@ -84,28 +80,22 @@ const PostCard = ({ post }) => (
           src={post.photoURL}
           alt={`${post.type} photo`}
           className="w-full h-auto max-h-96 object-contain rounded-sm"
-        />
-        {" "}
+        />{" "}
       </div>
-    )}
-    {" "}
+    )}{" "}
     <div className="border-t border-gray-200 pt-3">
-       <p className="font-semibold text-sm mb-1 text-green-700">Description:</p>{" "}
+      <p className="font-semibold text-sm mb-1 text-green-700">Description:</p>{" "}
       <p className="text-gray-700 text-sm">
         {post.description || "No detailed description available."}{" "}
-      </p>
-      {" "}
-    </div>
-    {" "}
+      </p>{" "}
+    </div>{" "}
     {post.address && (
       <div className="text-xs text-gray-500 italic mt-2">
         Location: {post.address}{" "}
       </div>
-    )}
-    {" "}
+    )}{" "}
   </div>
 );
-
 
 export default function Profile() {
   const { user } = useAuth();
@@ -114,7 +104,7 @@ export default function Profile() {
   const targetUserId = urlUserId || user?.uid;
   const isOwner = user?.uid === targetUserId;
 
-  // State Management 
+  // State Management
   const [username, setUsername] = useState("");
   const [role, setRole] = useState("");
   const [currentProfilePhoto, setCurrentProfilePhoto] = useState(defaultImg);
@@ -127,7 +117,6 @@ export default function Profile() {
   const [averageRating, setAverageRating] = useState(0);
   const [ratingCount, setRatingCount] = useState(0);
   const [isRatingSubmitted, setIsRatingSubmitted] = useState(false);
-
 
   const [userPosts, setUserPosts] = useState([]);
   const [loadingPosts, setLoadingPosts] = useState(true);
@@ -177,38 +166,37 @@ export default function Profile() {
     fetchUserData();
   }, [targetUserId, user, isOwner]);
 
-useEffect(() => {
-  const fetchUserPosts = async () => {
-    if (!targetUserId) return; 
+  useEffect(() => {
+    const fetchUserPosts = async () => {
+      if (!targetUserId) return;
 
-    setLoadingPosts(true);
-    try {
-      const postsQuery = query(
-        collection(db, "posts"),
-        where("userId", "==", targetUserId),
-        orderBy("createdAt", "desc")
-      );
-      const querySnapshot = await getDocs(postsQuery);
+      setLoadingPosts(true);
+      try {
+        const postsQuery = query(
+          collection(db, "posts"),
+          where("userId", "==", targetUserId),
+          orderBy("createdAt", "desc")
+        );
+        const querySnapshot = await getDocs(postsQuery);
 
-      const allPosts = querySnapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-        postType: doc.data().status,
-      }));
+        const allPosts = querySnapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+          postType: doc.data().status,
+        }));
 
-      console.log("Fetched posts:", allPosts); 
-      setUserPosts(allPosts);
-    } catch (error) {
-      console.error("Error fetching user posts:", error);
-    } finally {
-      setLoadingPosts(false);
-    }
-  };
+        console.log("Fetched posts:", allPosts);
+        setUserPosts(allPosts);
+      } catch (error) {
+        console.error("Error fetching user posts:", error);
+      } finally {
+        setLoadingPosts(false);
+      }
+    };
 
-  // Only fetch when targetUserId exists and user is loaded
-  if (targetUserId || user) fetchUserPosts();
-}, [targetUserId, user]);
-
+    // Only fetch when targetUserId exists and user is loaded
+    if (targetUserId || user) fetchUserPosts();
+  }, [targetUserId, user]);
 
   const handlePhotoChange = (e) => {
     const file = e.target.files[0];
@@ -223,22 +211,28 @@ useEffect(() => {
     setIsEditing(false);
 
     try {
+      // 1. Start with the CURRENT public URL (from state, which was fetched from Firestore)
+      //    We rely on currentProfilePhoto holding the last valid public URL or defaultImg.
       let photoURL = currentProfilePhoto;
 
       if (fileToUpload) {
+        // 2. Upload new file and get the NEW public URL
         const storageRef = ref(storage, `users/${user.uid}/profile.jpg`);
         const snapshot = await uploadBytes(storageRef, fileToUpload);
-        photoURL = await getDownloadURL(snapshot.ref);
+        photoURL = await getDownloadURL(snapshot.ref); // This is the crucial public HTTPS URL
         setFileToUpload(null);
       }
+      // NOTE: If fileToUpload is null, photoURL remains the existing currentProfilePhoto (the public URL).
 
+      // 3. Save the public URL and description to Firestore
       const userRef = doc(db, "users", user.uid);
       await updateDoc(userRef, {
-        profilePhoto: photoURL,
+        profilePhoto: photoURL, // This is the public HTTPS URL required for viewing
         description: description,
       });
 
       setCurrentProfilePhoto(photoURL);
+      await updateProfile(user, { photoURL: photoURL });
       alert("Profile updated successfully!");
     } catch (error) {
       console.error("Error updating profile:", error);
@@ -316,6 +310,7 @@ useEffect(() => {
     });
   };
 
+  const [hoverRating, setHoverRating] = useState(0);
 
   return (
     <div className=" h-auto space-y-8">
@@ -351,7 +346,9 @@ useEffect(() => {
             <h2 className="text-base font-semibold">
               {username || "Loading..."}
             </h2>
-            <h3 className="text-sm text-[rgb(40,112,56)]">{role || "Loading..."}</h3>
+            <h3 className="text-sm text-[rgb(40,112,56)]">
+              {role || "Loading..."}
+            </h3>
 
             {/* RATING DISPLAY */}
             {(ratingCount > 0 || !isOwner) && (
@@ -373,19 +370,27 @@ useEffect(() => {
 
             {/* RATING INPUT */}
             {!isOwner && !isRatingSubmitted && user?.uid && (
-              <div className="mt-4 p-3 border rounded-lg bg-white shadow-sm">
+              <div className="mt-4 p-3 border border-gray-200 rounded-lg bg-white shadow-sm">
                 <p className="text-sm font-semibold mb-2 text-gray-700">
                   Rate this user:
                 </p>
-                <div className="flex justify-center space-x-2">
+                <div
+                  className="flex justify-center space-x-2"
+                  onMouseLeave={() => setHoverRating(0)}
+                >
                   {[1, 2, 3, 4, 5].map((star) => (
                     <button
                       key={star}
                       onClick={() => handleRateUser(star)}
-                      className="text-2xl text-yellow-500 hover:scale-110 transition duration-100 ease-in-out focus:outline-none"
+                      onMouseEnter={() => setHoverRating(star)}
+                      className="cursor-pointer text-2xl text-yellow-500 hover:scale-110 transition duration-100 ease-in-out focus:outline-none"
                       aria-label={`Rate ${star} stars`}
                     >
-                      <i className="bi bi-star-fill"></i>
+                      <i
+                        className={`bi ${
+                          star <= hoverRating ? "bi-star-fill" : "bi-star"
+                        }`}
+                      ></i>
                     </button>
                   ))}
                 </div>
@@ -432,37 +437,35 @@ useEffect(() => {
                 </button>
               )}
             </div>
-      {/* --- USER POSTS SECTION --- */}
-      <div className="mt-8 ">
-        <h2 className="text-xl text-[rgb(40,112,56)] font-bold mb-4 border-b border-gray-200 pb-2">
-          {isOwner ? "Your Activity" : `${username}'s Posts`}
-        </h2>
+            {/* --- USER POSTS SECTION --- */}
+            <div className="mt-8 ">
+              <h2 className="text-xl text-[rgb(40,112,56)] font-bold mb-4 border-b border-gray-200 pb-2">
+                {isOwner ? "Your Activity" : `${username}'s Posts`}
+              </h2>
 
-        {loadingPosts && (
-          <p className="text-center text-gray-500">Loading posts...</p>
-        )}
+              {loadingPosts && (
+                <p className="text-center text-gray-500">Loading posts...</p>
+              )}
 
-        {!loadingPosts && userPosts.length === 0 && (
-          <p className="text-center text-gray-500">
-            {username} hasn't made any posts yet.
-          </p>
-        )}
+              {!loadingPosts && userPosts.length === 0 && (
+                <p className="text-center text-gray-500">
+                  {username} hasn't made any posts yet.
+                </p>
+              )}
 
-        {!loadingPosts && userPosts.length > 0 && (
-          <div className="space-y-4">
-            {userPosts.map((post) => (
-              <Link to={`/${post.username}/status/${post.id}`}>
-               <PostCard key={post.id} post={post} />
-              </Link>
-            ))}
-          </div>
-        )}
-      </div>
-
+              {!loadingPosts && userPosts.length > 0 && (
+                <div className="space-y-4">
+                  {userPosts.map((post) => (
+                    <Link to={`/${post.username}/status/${post.id}`}>
+                      <PostCard key={post.id} post={post} />
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </main>
       </div>
-
     </div>
   );
 }

@@ -124,7 +124,10 @@ useEffect(() => {
   async function fetchAreaNames(topAreas) {
     const results = await Promise.all(
       topAreas.map(async (area) => {
-         const functionBaseUrl = `http://127.0.0.1:5001/furs-project-7a0a3/us-central1/api`;
+         const functionBaseUrl = window.location.hostname === "localhost"
+    ? "http://127.0.0.1:5001/furs-project-7a0a3/us-central1/api" // Local emulator
+    : "https://us-central1-furs-project-7a0a3.cloudfunctions.net/api"; 
+    
         try {
           const res = await fetch(
             `${functionBaseUrl}/reverse?lat=${area.lat}&lon=${area.lng}&format=json&accept-language=en`
@@ -176,7 +179,7 @@ useEffect(() => {
                   center={[14.6295, 121.0419]}
                   zoom={15}
                   scrollWheelZoom={true}
-                  style={{ height: "100%", width: "100%" }}
+                  style={{ height: "100%", width: "100%"}}
                 >
                   <TileLayer
                     attribution='&copy; <a href="http://osm.org/copyright">OpenStreetMap</a>'
