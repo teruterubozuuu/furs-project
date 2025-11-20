@@ -61,14 +61,21 @@ export default function RegisterPage() {
         email,
         password
       );
+
+            const actionCodeSettings = {
+        // This is the URL the user will be redirected to AFTER verification.
+        url: 'https://furs-project-7a0a3.web.app', 
+        // This must be set to true for web/SPA applications
+        handleCodeInApp: true, 
+      }
+
       const user = userCredential.user;
 
 
-      await sendEmailVerification(user);
+      await sendEmailVerification(user, actionCodeSettings);
 
 
-      const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-      const userDocRef = doc(db, 'artifacts', appId, 'users', user.uid, 'user_data', 'profile');
+      const userDocRef = doc(db, 'users', user.uid);
 
       await setDoc(userDocRef, {
         username: username,

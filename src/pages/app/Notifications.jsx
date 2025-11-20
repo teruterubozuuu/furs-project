@@ -30,14 +30,16 @@ export default function Notifications() {
     await updateDoc(notifDoc, { read: true });
 
     if (notif.type === "like" || notif.type === "comment") {
-
+            console.log("clicked")
       if (notif.postId && notif.postUsername) {
         navigate(`/${notif.postUsername}/status/${notif.postId}`);
       }
     } else if (notif.type === "rating") {
+      
 
       if (notif.senderId) {
         navigate(`/profile/${notif.senderId}`); 
+        
       }
     }
   } catch (error) {

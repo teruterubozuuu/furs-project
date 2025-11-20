@@ -135,7 +135,7 @@ export default function Profile() {
           setUsername(data.username);
           setRole(data.userType);
           setCurrentProfilePhoto(data.profilePhoto || defaultImg);
-          setDescription(data.description || "Add a description...");
+          setDescription(data.description);
 
           const count = data.totalRatingCount || 0;
           const sum = data.totalRatingSum || 0;
@@ -363,6 +363,7 @@ export default function Profile() {
                 rows="3"
                 maxLength="150"
                 className="w-full max-w-xs text-sm text-gray-700 p-2 border rounded-md resize-none"
+                placeholder="Add description..."
               />
             ) : (
               <p className="text-gray-500 text-sm">{description}</p>

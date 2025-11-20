@@ -69,8 +69,7 @@ export default function LoginPage() {
                 Verification Required
               </h1>
               <p className="text-red-700 border border-red-300 bg-red-100 p-4 rounded-md">
-                Your account is currently signed in but requires email verification. 
-                A link has been sent to your email. Please click the link to proceed.
+                A verification link has been sent to your email. Please check your inbox or spam folder.
               </p>
               <button
                 onClick={() => signOut(auth)}
