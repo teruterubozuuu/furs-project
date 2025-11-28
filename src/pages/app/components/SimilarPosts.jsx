@@ -211,7 +211,7 @@ export default function SimilarPosts() {
         </div>
       ) : (
         <div className="p-4 text-center text-gray-500 italic bg-white border border-gray-200 rounded-lg">
-          No other reports were found to be sufficiently similar (above 50% threshold).
+          No other reports were found to be sufficiently similar.
         </div>
       )}
     </div>

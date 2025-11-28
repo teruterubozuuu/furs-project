@@ -2,6 +2,12 @@ import { useEffect, useState, useRef } from "react";
 import {
   collection,
   getDocs,
+  query,
+  orderBy,
+  limit,
+  startAfter,
+  startAt,
+  endAt,
   doc,
   updateDoc,
   deleteDoc,
@@ -10,39 +16,86 @@ import { getAuth, sendPasswordResetEmail } from "firebase/auth";
 import { db } from "../../firebase/config";
 import AddUser from "./components/AddUser";
 
+const PAGE_SIZE = 10;
+
 export default function User() {
   const [users, setUsers] = useState([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [lastDocs, setLastDocs] = useState([]);
+  const [searchText, setSearchText] = useState("");
   const [isOpenPost, setIsOpenPost] = useState(false);
   const [openMenuId, setOpenMenuId] = useState(null);
   const menuRef = useRef(null);
   const auth = getAuth();
 
-  useEffect(() => {
-    const fetchAllUsers = async () => {
-      try {
-        const querySnapshot = await getDocs(collection(db, "users"));
-        const usersList = querySnapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
-        setUsers(usersList);
-      } catch (error) {
-        console.error("Error fetching users:", error);
-      }
-    };
+  const fetchUsers = async (page = 1, search = "") => {
+    try {
+      let usersQuery;
 
-    fetchAllUsers();
-  }, []);
+      if (search) {
+        // For search, order by 'email' and use startAt/endAt for prefix search
+        const searchLower = search.toLowerCase();
+        usersQuery = query(
+          collection(db, "users"),
+          orderBy("email"),
+          startAt(searchLower),
+          endAt(searchLower + "\uf8ff"),
+          limit(PAGE_SIZE)
+        );
+      } else {
+        usersQuery = query(
+          collection(db, "users"),
+          orderBy("email"),
+          limit(PAGE_SIZE)
+        );
 
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (menuRef.current && !menuRef.current.contains(event.target)) {
-        setOpenMenuId(null);
+        if (page > 1 && lastDocs[page - 2]) {
+          usersQuery = query(
+            collection(db, "users"),
+            orderBy("email"),
+            startAfter(lastDocs[page - 2]),
+            limit(PAGE_SIZE)
+          );
+        }
       }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+
+      const querySnapshot = await getDocs(usersQuery);
+      const fetchedUsers = querySnapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+
+      setUsers(fetchedUsers);
+
+      if (!search) {
+        // store last doc for pagination only if not searching
+        const lastVisible = querySnapshot.docs[querySnapshot.docs.length - 1];
+        if (lastVisible) {
+          const updatedLastDocs = [...lastDocs];
+          updatedLastDocs[page - 1] = lastVisible;
+          setLastDocs(updatedLastDocs);
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching users:", error);
+    }
+  };
+
+  // fetch when page or search changes
+  useEffect(() => {
+    fetchUsers(currentPage, searchText);
+  }, [currentPage, searchText]);
+
+useEffect(() => {
+  const handleClickOutside = (event) => {
+    // Only close if click is outside any menu
+    if (!event.target.closest(".user-menu")) {
+      setOpenMenuId(null);
+    }
+  };
+  document.addEventListener("mousedown", handleClickOutside);
+  return () => document.removeEventListener("mousedown", handleClickOutside);
+}, []);
 
   const handleResetPassword = async (email) => {
     try {
@@ -67,14 +120,34 @@ export default function User() {
     }
   };
 
+  const functionBaseUrl =
+    window.location.hostname === "localhost"
+      ? "http://127.0.0.1:5001/furs-project-7a0a3/us-central1/api" // Local emulator
+      : "https://us-central1-furs-project-7a0a3.cloudfunctions.net/api"; // Production
+
   const handleDeleteUser = async (userId) => {
     const confirmDelete = confirm("Are you sure you want to delete this user?");
     if (!confirmDelete) return;
 
     try {
+      // Call backend to delete from Firebase Auth
+      const response = await fetch(`${functionBaseUrl}/deleteUser/${userId}`, {
+        method: "DELETE",
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to delete user from Auth");
+      }
+
+      // Delete from Firestore
       await deleteDoc(doc(db, "users", userId));
-      setUsers(users.filter((user) => user.id !== userId));
-      alert("User deleted successfully.");
+
+      // Update UI immediately
+      setUsers((prevUsers) => prevUsers.filter((user) => user.id !== userId));
+
+      alert(`User ${userId} deleted successfully.`);
     } catch (error) {
       console.error("Error deleting user:", error);
       alert("Failed to delete user.");
@@ -84,32 +157,34 @@ export default function User() {
   return (
     <div>
       <h1 className="text-xl font-semibold text-[#115315]">User Management</h1>
-
       <p className="text-sm font-light">
         {users.length > 0
-          ? `${users.length} user${users.length > 1 ? "s" : ""} found`
+          ? `${users.length} user(s) on this page`
           : "No users found"}
       </p>
 
       <div className="flex justify-between items-center py-3 flex-wrap gap-3">
         <button
-          className="bg-[#115315] text-white px-3 py-1 rounded-md hover:bg-[#0a320d] transition-all"
+          className="bg-[#115315] text-white px-3 py-1 rounded-md hover:bg-[#0a320d] transition-all cursor-pointer"
           onClick={() => setIsOpenPost(true)}
         >
           Add user
         </button>
         <input
           type="text"
-          placeholder="Search user..."
+          placeholder="Search by email..."
+          value={searchText}
+          onChange={(e) => {
+            setSearchText(e.target.value);
+            setCurrentPage(1); // reset page when searching
+          }}
           className="border border-gray-300 rounded-md p-1 focus:outline"
         />
       </div>
 
       <AddUser isOpen={isOpenPost} onClose={() => setIsOpenPost(false)} />
 
-      {/* User Table */}
       <div className="lg:overflow-visible overflow-x-auto relative">
-        {/* Header */}
         <div className="min-w-[400px] flex items-center justify-between bg-[#115315] py-2 px-3 text-white rounded-md">
           <div className="flex-1 grid grid-cols-4 text-center">
             <span>User UID</span>
@@ -120,13 +195,11 @@ export default function User() {
           <span className="w-[24px]">{""}</span>
         </div>
 
-        {/* Rows */}
         {users.map((u) => (
           <div
             key={u.id}
             className="min-w-[400px] flex items-center justify-between bg-[#D3ECD4] py-2 px-3 text-[#115315] rounded-md mt-3 relative"
           >
-            {/* User Info */}
             <div className="flex-1 grid grid-cols-4 text-center">
               <span>{u.id}</span>
               <span className="truncate px-2">{u.email}</span>
@@ -134,7 +207,6 @@ export default function User() {
               <span className="truncate px-2">{u.userType}</span>
             </div>
 
-            {/* Menu Icon + Dropdown */}
             <div className="relative flex flex-col items-end" ref={menuRef}>
               <i
                 onClick={() => setOpenMenuId(openMenuId === u.id ? null : u.id)}
@@ -142,9 +214,11 @@ export default function User() {
               ></i>
 
               {openMenuId === u.id && (
-                <div className="flex flex-col items-start border border-gray-200 bg-white w-[150px] rounded-md absolute top-6 right-0 z-10 shadow-md">
+                <div className="user-menu flex flex-col items-start border border-gray-200 bg-white w-[150px] rounded-md absolute top-6 right-0 z-10 shadow-md">
                   <button
-                    onClick={() => {
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
                       handleResetPassword(u.email);
                       setOpenMenuId(null);
                     }}
@@ -153,7 +227,9 @@ export default function User() {
                     Reset Password
                   </button>
                   <button
-                    onClick={() => {
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
                       handleDisableUser(u.id);
                       setOpenMenuId(null);
                     }}
@@ -162,7 +238,9 @@ export default function User() {
                     Disable Account
                   </button>
                   <button
-                    onClick={() => {
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
                       handleDeleteUser(u.id);
                       setOpenMenuId(null);
                     }}
@@ -175,6 +253,29 @@ export default function User() {
             </div>
           </div>
         ))}
+
+        {/* Pagination */}
+        {!searchText && (
+          <div className="flex justify-center mt-4 gap-2">
+            <button
+              onClick={() => currentPage > 1 && setCurrentPage(currentPage - 1)}
+              className="px-3 py-1 bg-[#115315] text-white rounded hover:bg-[#0a320d] transition-all cursor-pointer"
+              disabled={currentPage === 1}
+            >
+              Previous
+            </button>
+            <span className="px-3 py-1">{currentPage}</span>
+            <button
+              onClick={() =>
+                lastDocs[currentPage - 1] && setCurrentPage(currentPage + 1)
+              }
+              className="px-3 py-1 bg-[#115315] text-white rounded hover:bg-[#0a320d] transition-all cursor-pointer"
+              disabled={!lastDocs[currentPage - 1]}
+            >
+              Next
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

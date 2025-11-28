@@ -11,7 +11,8 @@ export default function Heatmap() {
   const [points, setPoints] = useState([]);
   const [topAreas, setTopAreas] = useState([]);
   const [areaNames, setAreaNames] = useState([]);
-  const [isLoading,setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
+  const [recenterTarget, setRecenterTarget] = useState(null);
 
   useEffect(() => {
     const collections = ["posts"];
@@ -73,7 +74,7 @@ export default function Heatmap() {
     const counts = {};
 
     points.forEach(([lat, lng]) => {
-      const roundedLat = lat.toFixed(2); 
+      const roundedLat = lat.toFixed(2);
       const roundedLng = lng.toFixed(2);
       const key = `${roundedLat},${roundedLng}`;
       counts[key] = (counts[key] || 0) + 1;
@@ -90,51 +91,49 @@ export default function Heatmap() {
     return sorted;
   }
 
-useEffect(() => {
-  if (topAreas.length > 0) {
-    fetchAreaNames(topAreas).then((results) => {
-      const merged = results.reduce((acc, area) => {
-        const existing = acc.find((a) => a.name === area.name);
-        if (existing) {
-          existing.count += area.count;
-        } else {
-          acc.push({ ...area });
-        }
-        return acc;
-      }, []);
+  useEffect(() => {
+    if (topAreas.length > 0) {
+      fetchAreaNames(topAreas).then((results) => {
+        const merged = results.reduce((acc, area) => {
+          const existing = acc.find((a) => a.name === area.name);
+          if (existing) {
+            existing.count += area.count;
+          } else {
+            acc.push({ ...area });
+          }
+          return acc;
+        }, []);
 
-      const sorted = merged.sort((a, b) => b.count - a.count).slice(0, 5);
-      setAreaNames(sorted);
+        const sorted = merged.sort((a, b) => b.count - a.count).slice(0, 5);
+        setAreaNames(sorted);
 
+        setIsLoading(false);
+      });
+    } else if (points.length > 0 && topAreas.length === 0) {
       setIsLoading(false);
-    });
-  } else if (points.length > 0 && topAreas.length === 0) {
-    setIsLoading(false);
-  }
-}, [topAreas]);
+    }
+  }, [topAreas]);
 
-
-useEffect(() => {
-  if (points.length > 0) {
-    setTopAreas(summarizeTopAreas(points));
-  }
-}, [points]);
-
+  useEffect(() => {
+    if (points.length > 0) {
+      setTopAreas(summarizeTopAreas(points));
+    }
+  }, [points]);
 
   async function fetchAreaNames(topAreas) {
     const results = await Promise.all(
       topAreas.map(async (area) => {
-         const functionBaseUrl = window.location.hostname === "localhost"
-    ? "http://127.0.0.1:5001/furs-project-7a0a3/us-central1/api" // Local emulator
-    : "https://us-central1-furs-project-7a0a3.cloudfunctions.net/api"; 
-    
+        const functionBaseUrl =
+          window.location.hostname === "localhost"
+            ? "http://127.0.0.1:5001/furs-project-7a0a3/us-central1/api" // Local emulator
+            : "https://us-central1-furs-project-7a0a3.cloudfunctions.net/api";
+
         try {
           const res = await fetch(
             `${functionBaseUrl}/reverse?lat=${area.lat}&lon=${area.lng}&format=json&accept-language=en`
           );
           const json = await res.json();
           const addr = json.address || {};
-
 
           const name =
             addr.suburb ||
@@ -154,6 +153,19 @@ useEffect(() => {
     return results;
   }
 
+  function MapRecenter({ target }) {
+    const map = useMap();
+
+    useEffect(() => {
+      // Check if the target is set and has valid coordinates
+      if (target && target.lat && target.lng) {
+        // Set the map view: [latitude, longitude], zoom level
+        map.setView([target.lat, target.lng], 15);
+      }
+    }, [map, target]); // Recenter whenever the target changes
+
+    return null;
+  }
 
   return (
     <div className="max-w-[1000px] mx-auto h-auto space-y-4 bg-[#fafafa] rounded-lg shadow-sm p-5 border border-gray-200">
@@ -164,12 +176,14 @@ useEffect(() => {
             This heatmap highlights areas with a high concentration of stray
             animal sightings, grouped approximately by barangay or district.
           </p>
-          
+
           {/* ✅ START LOADING CHECK */}
           {isLoading ? (
             <div className="flex flex-col items-center justify-center h-[500px] w-full border border-gray-300 rounded-md">
               <OrbitProgress color="#2e7d32" size="large" />
-              <p className="mt-4 text-gray-600">Loading map data and calculating top areas...</p>
+              <p className="mt-4 text-gray-600">
+                Loading map data and calculating top areas...
+              </p>
             </div>
           ) : (
             <>
@@ -179,25 +193,33 @@ useEffect(() => {
                   center={[14.6295, 121.0419]}
                   zoom={15}
                   scrollWheelZoom={true}
-                  style={{ height: "100%", width: "100%"}}
+                  style={{ height: "100%", width: "100%" }}
                 >
                   <TileLayer
                     attribution='&copy; <a href="http://osm.org/copyright">OpenStreetMap</a>'
                     url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                   />
                   <HeatmapLayer points={points} />
+                  <MapRecenter target={recenterTarget} />
                 </MapContainer>
               </div>
 
               {/* Top 5 Areas Section (Only show if NOT loading) */}
               <div className="flex justify-center">
                 <div className="text-center">
-                  <h2 className="font-semibold text-lg text-green-700 mb-2">Top 5 Areas</h2>
+                  <h2 className="font-semibold text-lg text-green-700 mb-2">
+                    Top 5 Areas
+                  </h2>
                   {areaNames.length > 0 ? (
                     <ul className="text-sm text-gray-700 list-none space-y-2">
                       {areaNames.map((area, index) => (
-                        <li key={index}>
-                          <span className="font-medium">
+                        <li
+                          key={index}
+                          onClick={() => {
+                            setRecenterTarget({ lat: area.lat, lng: area.lng });
+                          }}
+                        >
+                          <span className="font-medium hover:underline hover:font-semibold cursor-pointer">
                             #{index + 1}: {area.name}
                           </span>
                           <br />
@@ -208,17 +230,16 @@ useEffect(() => {
                       ))}
                     </ul>
                   ) : (
-                    <p className="text-gray-500 text-sm">Not enough data yet.</p>
+                    <p className="text-gray-500 text-sm">
+                      Not enough data yet.
+                    </p>
                   )}
                 </div>
               </div>
             </>
-          )} 
-          {/* ✅ END LOADING CHECK */}
-
+          )}
         </main>
       </div>
     </div>
   );
 }
-  

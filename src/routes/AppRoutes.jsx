@@ -16,7 +16,7 @@ import ForgotPassword from "../pages/ForgotPassword";
 import Notifications from "../pages/app/Notifications";
 import ViewPost from "../pages/app/components/ViewPost";
 import Organizations from "../pages/app/Organizations";
-import NotFound from "../pages/NotFound";
+
 import SimilarPosts from "../pages/app/components/SimilarPosts";
 
 function AppRoutes() {
@@ -165,15 +165,7 @@ function AppRoutes() {
             </RequireAuth>
           }
         />
-
-        {/*Page not Found*/}
-        <Route
-          path="*"
-          element={
-            <NotFound/>
-          }
-          />
-
+        
           {/*Simlar Posts*/}
           <Route
           path="/similar-posts/:username/:targetPostId"

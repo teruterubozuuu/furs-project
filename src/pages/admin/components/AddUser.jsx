@@ -1,26 +1,20 @@
 import { useState } from "react";
-import { createUserWithEmailAndPassword, getAuth } from "firebase/auth";
-import { auth, db } from "../../../firebase/config";
+import { createUserWithEmailAndPassword, getAuth, sendEmailVerification } from "firebase/auth";
+import { db } from "../../../firebase/config";
 import { doc, setDoc } from "firebase/firestore";
-import {
-  Menu,
-  MenuButton,
-  MenuItem,
-  MenuItems,
-} from "@headlessui/react";
+import { Menu, MenuButton, MenuItem, MenuItems } from "@headlessui/react";
 import { ChevronDownIcon } from "@heroicons/react/20/solid";
 
 export default function AddUser({ isOpen, onClose }) {
   const [username, setUsername] = useState("");
-  const [userType, setUserType] = useState("Community Volunteer");
+  const [selectedRole, setSelectedRole] = useState("Community Volunteer");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
-  const [selectedRole, setSelectedRole] = useState("Role");
 
-  const role = ["Rescuer", "Community Volunteer", "Admin"];
+  const roles = ["Rescuer", "Community Volunteer", "Admin"];
+  const auth = getAuth();
 
   const handleClose = () => {
     if (isSubmitting) return;
@@ -28,51 +22,46 @@ export default function AddUser({ isOpen, onClose }) {
     setUsername("");
     setEmail("");
     setPassword("");
-    setUserType("Community Volunteer");
+    setSelectedRole("Community Volunteer");
     setError("");
   };
 
-const handleSubmit = async (e) => {
-  e.preventDefault();
-  setIsSubmitting(true);
-  setError("");
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    setError("");
 
-  try {
+    try {
+      // 1️⃣ Create user in Firebase Auth
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const newUser = userCredential.user;
 
-    const tempApp = auth.app;
-    const tempAuth = getAuth(tempApp);
+      // 2️⃣ Send email verification
+      await sendEmailVerification(newUser);
 
+      // 3️⃣ Add user to Firestore
+      await setDoc(doc(db, "users", newUser.uid), {
+        username,
+        email,
+        userType: selectedRole,
+        profilePhoto: "",
+        description: "Add a description...",
+        totalRatingSum: 0,
+        totalRatingCount: 0,
+      });
 
-    const userCredential = await createUserWithEmailAndPassword(
-      tempAuth,
-      email,
-      password
-    );
+      // 4️⃣ Optionally sign out the temporary created user (so admin stays signed in)
+      await auth.signOut();
 
-    const newUser = userCredential.user;
-
-    await sendEmailVerification(newUser);
-
-    await setDoc(doc(db, "users", newUser.uid), {
-      username,
-      email,
-      userType: selectedRole,
-      profilePhoto: "",
-      description: "Add a description...",
-      totalRatingSum: 0,
-      totalRatingCount: 0,
-    });
-
-    await tempAuth.signOut();
-
-    handleClose();
-  } catch (err) {
-    console.error("Error adding user:", err);
-    setError("Failed to add user. Email might already be in use.");
-  } finally {
-    setIsSubmitting(false);
-  }
-};
+      handleClose();
+      alert("User added successfully!");
+    } catch (err) {
+      console.error("Error adding user:", err);
+      setError("Failed to add user. Email might already be in use.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   if (!isOpen) return null;
 
@@ -132,25 +121,23 @@ const handleSubmit = async (e) => {
           </div>
 
           <div>
-            <Menu as="div" className="relative inline-block">
-              <MenuButton className="inline-flex border cursor-pointer hover:bg-gray-200 border-gray-200 w-full justify-center gap-x-1.5 rounded-md bg-white/10 px-3 py-2 text-sm font-semibold text-gray-700">
+            <Menu as="div" className="relative inline-block w-full">
+              <MenuButton className="inline-flex border cursor-pointer hover:bg-gray-200 border-gray-200 w-full justify-between items-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-700">
                 {selectedRole}
-                <ChevronDownIcon className="-mr-1 size-5 text-gray-700" />
+                <ChevronDownIcon className="-mr-1 h-5 w-5 text-gray-700" />
               </MenuButton>
-              <MenuItems className="absolute left-0 z-10 mt-2 w-56 origin-top-right rounded-lg border border-gray-200 bg-white transition">
-                <div className="py-1">
-                  {role.map((type) => (
-                    <MenuItem key={type}>
-                      <button
-                        type="button"
-                        onClick={() => setSelectedRole(type)}
-                        className="cursor-pointer text-gray-700 hover:bg-gray-100 block w-full text-left px-4 py-2 text-sm"
-                      >
-                        {type}
-                      </button>
-                    </MenuItem>
-                  ))}
-                </div>
+              <MenuItems className="absolute left-0 z-10 mt-2 w-full origin-top-right rounded-lg border border-gray-200 bg-white transition">
+                {roles.map((role) => (
+                  <MenuItem key={role}>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedRole(role)}
+                      className="cursor-pointer text-gray-700 hover:bg-gray-100 block w-full text-left px-4 py-2 text-sm"
+                    >
+                      {role}
+                    </button>
+                  </MenuItem>
+                ))}
               </MenuItems>
             </Menu>
           </div>
@@ -159,7 +146,7 @@ const handleSubmit = async (e) => {
             type="submit"
             disabled={isSubmitting}
             className={`w-full p-2 rounded-sm text-white font-medium ${
-              isSubmitting ? "bg-gray-400" : "bg-[#2e7d32] hover:bg-[#256428]"
+              isSubmitting ? "bg-gray-400" : "bg-[#2e7d32] hover:bg-[#256428] cursor-pointer"
             }`}
           >
             {isSubmitting ? "Adding..." : "Add User"}
